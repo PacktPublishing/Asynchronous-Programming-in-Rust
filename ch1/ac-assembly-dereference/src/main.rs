@@ -3,7 +3,7 @@ use std::arch::asm;
 
 fn main() {
     let t = 100;
-    let t_ptr: *const usize = &t; // if uou comment out this...
+    let t_ptr: *const usize = &t; // if you comment out this...
     // ...and uncomment the line below. The program will fail.   
     // let t_ptr = 99999999999999 as *const usize;
     let x = dereference(t_ptr);
