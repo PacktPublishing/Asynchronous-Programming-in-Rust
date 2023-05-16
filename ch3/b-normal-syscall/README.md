@@ -14,7 +14,7 @@ The first line is just telling the compiler to only compile this if the `target_
 The second line is a linker directive, telling the linker we want to link to the library `kernel32` (if you ever see an example that links to `user32` that will also work).
 
 ```rust, ignore
-extern "stdcall" {
+extern "system" {
     /// https://docs.microsoft.com/en-us/windows/console/getstdhandle
     fn GetStdHandle(nStdHandle: i32) -> i32;
     /// https://docs.microsoft.com/en-us/windows/console/writeconsole
@@ -28,8 +28,7 @@ extern "stdcall" {
 }
 ```
 
-First of all, `extern "stdcall"`, tells the compiler that we won't use the `C`
-calling convention but use Windows calling convention called `stdcall`.
+First of all, `extern "system"`, tells the compiler that we will use the `system` calling convention, and is a little peculiar. On Windows you have different calling conventions whether you run 32-bit "x86" version of Windows (which uses "stdcall" calling convention), or 64-bit x86_64 version of Windows, which uses the "C" calling convention. The "system" calling convention will choose the right one based on the Windows version.
 
 The next part is the functions we want to link to. On Windows, we need to link to two functions to get this to work: `GetStdHandle` and `WriteConsoleW`.
 `GetStdHandle` retrieves a reference to a standard device like `stdout`.

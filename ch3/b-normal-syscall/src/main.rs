@@ -35,7 +35,7 @@ fn syscall(message: String) -> io::Result<()> {
 
 #[cfg(target_family = "windows")]
 #[link(name = "kernel32")]
-extern "stdcall" {
+extern "system" {
     /// https://docs.microsoft.com/en-us/windows/console/getstdhandle
     fn GetStdHandle(nStdHandle: i32) -> i32;
     /// https://docs.microsoft.com/en-us/windows/console/writeconsole
@@ -68,7 +68,9 @@ fn syscall(message: String) -> io::Result<()> {
         if res  == 0 {
             return Err(io::Error::last_os_error());
         }
-
+    
+    // Just assert that the output variable we wrote all the bytes we expected
+    // and panic if we didn't
     assert_eq!(output, len);
     Ok(())
 }
