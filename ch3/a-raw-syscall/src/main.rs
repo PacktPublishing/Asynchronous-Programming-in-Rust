@@ -1,7 +1,7 @@
 use std::arch::asm;
 
 fn main() {
-    let message = String::from("Hello world from interrupt!\n");
+    let message = String::from("Hello world from raw syscall!\n");
     syscall(message);
 }
 
