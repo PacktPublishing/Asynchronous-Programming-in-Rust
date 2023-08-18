@@ -23,7 +23,7 @@ fn main() {
     // We crate 5 requests to an endpoint we control the delay on
     for i in 1..6 {
         // This site has an API to simulate slow responses from a server
-        let addr = "app.requestly.io:80";
+        let addr = "localhost:8080";
         let mut stream = TcpStream::connect(addr).unwrap();
 
         // The delay is passed in to the GET request as milliseconds.
@@ -31,11 +31,12 @@ fn main() {
         // them as `5, 4, 3, 2, 1`
         let delay = (5 - i) * 1000;
         let request = format!(
-            "GET /delay/{}/http://www.google.com HTTP/1.1\r\n\
-             Host: app.requestly.io\r\n\
+            "GET /{}/request-{} HTTP/1.1\r\n\
+             Host: localhost\r\n\
              Connection: close\r\n\
              \r\n",
-            delay
+            delay,
+            i
         );
         stream.write_all(request.as_bytes()).unwrap();
 
