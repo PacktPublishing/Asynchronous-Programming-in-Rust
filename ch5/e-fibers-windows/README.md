@@ -37,9 +37,9 @@ Needless to say, the same disclaimer regarding safety as we made for the example
 
 ## Detailed explanation on the changes made to support Windows
 
-Our example works for both OSX, Linux and Windows, but as I have pointed out, our Windows implementation is not correct even though it's working. Since I've been quite commited to make this work on all three platforms, I'll go through what we need to do in this chapter.
+Our example works for both OSX, Linux and Windows as long as the platform is running on a x86-64 architecture (unfortunately, this isn't the case anymore for newer Macs using the M-series chips).
 
-You might wonder why I didn't include this in the original code, and the reason for that is that this is really not at all that relevant for explaining the main concepts I wanted to explore.
+You might wonder why I didn't include this in the original example, and the reason for that is that this is really not at all that relevant for explaining the main concepts of how fibers work.
 
 Here I'm trying to go a bit further here to explore how we should set up the stack for Windows correct way and do a proper context switch. Even though we might not get all the way to a perfect implementation, there is plenty of information and references for you to explore further and I'll list some of them here:
 
@@ -50,7 +50,7 @@ Here I'm trying to go a bit further here to explore how we should set up the sta
 
 ### What's special with Windows
 
-The reason I don't consider this important enough to implement in the main example is that that windows has more `callee saved` registers, or `non-volatile`registers as they call it in addition to one rather poorly documented quirk that we need to account for, so what we really do is just to save more data when we do the context switch and that needs more conditional compilation.
+The reason I don't consider this important enough to implement in the main example is that that Windows has more `callee saved` registers, or `non-volatile` registers as they call it in addition to one rather poorly documented quirk that we need to account for, so what we really do is just to save more data when we do the context switch and that needs more conditional compilation. There is also the case where we need to handle the differences in calling convention when writing and calling our `#[naked]` functions.
 
 >Conditionally compiling this to support windows correctly bloats our code with almost 50 % without adding much to what we need for a basic understanding.
 >
@@ -97,11 +97,11 @@ struct ThreadContext {
 
 The second part is poorly documented. I've actually struggled to verify exactly how skipping this will cause a failure on modern Windows but there's [enough references to it](https://probablydance.com/2013/02/20/handmade-coroutines-for-windows/) around from [trustworthy sources](https://github.com/boostorg/context/blob/develop/src/asm/ontop\_x86\_64\_ms\_pe\_gas.asm#L116-L129) that I'm in no doubt we need to go through this.
 
-You see, Windows wants to store some information about the currently running thread in what it calls the `Thread Information Block`, referred to as `NT_TIB`. Specifically it wants access to information about the `Stack Base`and the `Stack Limit`in the `%gs`register.
+You see, Windows wants to store some information about the currently running thread in what it calls the `Thread Information Block`, referred to as `NT_TIB`. Specifically it wants access to information about the `Stack Base` and the `Stack Limit` in the `gs`register.
 
 > What is the GS register you might ask?
 >
->The answer I found was a bit perplexing. Apparently these segment registers, GS on x64, and FS on x86 was intended by Intel to [allow programs to access many different segments of memory](https://stackoverflow.com/questions/10810203/what-is-the-fs-gs-register-intended-for) that were meant to be part of a persistent virtual store. Modern operating systems doesn't use these registers this way as we can only access our own process memory (which appear as a "flat" memory to us as programmers). Back when it wasn't clear that this would be the prevailing model, these registers would allow for different implementations by different operating systems. See the [Wikipedia article on the Multics operating system](https://en.wikipedia.org/wiki/Multics) if you're curious.
+>The answer might be a bit perplexing. Apparently these segment registers, GS on x64, and FS on x86 was intended by Intel to [allow programs to access many different segments of memory](https://stackoverflow.com/questions/10810203/what-is-the-fs-gs-register-intended-for) that were meant to be part of a persistent virtual store. Modern operating systems doesn't use these registers this way as we can only access our own process memory (which appear as a "flat" memory to us as programmers). Back when it wasn't clear that this would be the prevailing model, these registers would allow for different implementations by different operating systems. See the [Wikipedia article on the Multics operating system](https://en.wikipedia.org/wiki/Multics) if you're curious.
 
 That means that these segment registers are freely used by operating systems for what they deem appropriate. Windows stores information about the currently running thread in the GS register, and Linux uses these registers for thread local storage.
 
@@ -148,7 +148,7 @@ Now to implement this we need to make a change to our `spawn()` function to actu
 
 ![https://docs.microsoft.com/en-us/cpp/build/stack-usage?view=vs-2019#stack-allocation](images/image.png)
 
-You see, since Rust sets up our stack frames, we only need to care about where to put our `%rsp`and the return address and this looks pretty much the same as in the psABI. The differences between Win64 and psABI are elsewhere and Rust takes care of all these differences for us.
+You see, since Rust sets up our stack frames, we only need to care about where to put our `rsp`and the return address and this looks pretty much the same as in the System V ABI.
 
 Now to implement this we need to make a change to our `spawn()` function to actually provide this information and set up our stack.
 
