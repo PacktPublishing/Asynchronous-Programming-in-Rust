@@ -1,16 +1,26 @@
-use std::time::Duration;
-use actix_web::{Responder, HttpResponse, get, HttpServer, App, web, rt::time::sleep};
+use std::{time::Duration, sync::atomic::{AtomicUsize, Ordering}};
+use actix_web::{Responder, get, HttpServer, App, web, rt::time::sleep};
 
-#[get("/{delay}/{text}")]
+const EXPLANATION: &str = 
+"USAGE:
+Delay server works by issuing a http GET request in the format: \"http://localhost:8080/[delay in ms]/[HtmlEncoded meesage]\"\n
+On reception, it immidiately reports the following to the console: {Message #} - {delay in ms}: {message}\n.
+The server then delays the response for the requested time and echoes the message back to the caller.\n\n
+REQUESTS:";
+static COUNTER: AtomicUsize = AtomicUsize::new(1);
+
+#[get("/{delay}/{message}")]
 async fn delay(path: web::Path<(u64, String)>) -> impl Responder {
     let (delay_ms, message) = path.into_inner();
-    println!("Got message: {message}");
+    let count = COUNTER.fetch_add(1, Ordering::Relaxed);
+    println!("#{count} - {delay_ms}ms: {message}");
     sleep(Duration::from_millis(delay_ms)).await;
-    HttpResponse::Ok()
+    message
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    println!("{EXPLANATION}");
     HttpServer::new(|| {
         App::new()
         .service(delay)
