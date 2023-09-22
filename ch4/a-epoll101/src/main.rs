@@ -15,7 +15,7 @@ fn main() -> Result<()> {
     let addr = "localhost:8080";
     
     for i in 1..6 {
-        let delay = (5 - i) * 1000;
+        let delay = (6 - i) * 1000;
         let request = format!(
             "GET /{}/request-{} HTTP/1.1\r\n\
              Host: localhost\r\n\
@@ -36,7 +36,12 @@ fn main() -> Result<()> {
         poll.poll(&mut events, None)?;
         
         for event in events {
+            let index = event.epoll_data - 1;
+            let mut data = vec![0u8; 4098];
+            let n = streams[index].read(&mut data)?;
+            let txt = String::from_utf8_lossy(&data[..n]);
             println!("RECEIVED: {:?}", event);
+            println!("{txt}");
             event_counter -= 1;
         }
     }

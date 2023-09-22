@@ -12,7 +12,7 @@ static COUNTER: AtomicUsize = AtomicUsize::new(1);
 #[get("/{delay}/{message}")]
 async fn delay(path: web::Path<(u64, String)>) -> impl Responder {
     let (delay_ms, message) = path.into_inner();
-    let count = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let count = COUNTER.fetch_add(1, Ordering::SeqCst);
     println!("#{count} - {delay_ms}ms: {message}");
     sleep(Duration::from_millis(delay_ms)).await;
     message

@@ -27,7 +27,7 @@ impl Poll {
         let timeout = timeout.unwrap_or(-1);
         let max_events = events.capacity() as i32;
         let res = unsafe { ffi::epoll_wait(fd, events.as_mut_ptr(), max_events, timeout) };
-        ;
+
         if res < 0 {
             return Err(std::io::Error::last_os_error());
         };
