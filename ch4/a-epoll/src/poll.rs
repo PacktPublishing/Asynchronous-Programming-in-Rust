@@ -73,6 +73,7 @@ impl Registry {
         Ok(())
     }
 }
+
 impl Drop for Registry {
     fn drop(&mut self) {
         let res = unsafe { ffi::close(self.raw_fd) };
