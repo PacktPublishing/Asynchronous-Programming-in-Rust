@@ -2,6 +2,8 @@ use std::io::Result;
 
 use crate::{ffi, net::{self, TcpStream}};
 
+type Events = Vec<ffi::Event>;
+
 pub struct Poll {
     registry: Registry,
 }
@@ -21,8 +23,16 @@ impl Poll {
     pub fn registry(&self) -> &Registry {
         &self.registry
     }
-
-    pub fn poll(&self, events: &mut Vec<ffi::Event>, timeout: Option<i32>) -> Result<()> {
+    
+    /// Makes a blocking call to the OS parking the calling thread. It will wake up
+    /// when one or more events we've registered interest in have occurred or
+    /// the timeout duration has elapsed, whichever occurs first.
+    /// 
+    /// # Errors
+    /// If an error of the type `io::ErrorKind::Interrupted` is reported it
+    /// means that the call timed out. This error condition should be expected
+    /// and handled by the caller of this function.
+    pub fn poll(&mut self, events: &mut Events, timeout: Option<i32>) -> Result<()> {
         let fd = self.registry.raw_fd;
         let timeout = timeout.unwrap_or(-1);
         let max_events = events.capacity() as i32;
@@ -32,7 +42,7 @@ impl Poll {
             return Err(std::io::Error::last_os_error());
         };
 
-        // This is safe because `kevent` ensures that `n_events` are assigned.
+        // This is safe because epol_wait ensures that `res` events are assigned.
         unsafe { events.set_len(res as usize) };
         Ok(())
     }

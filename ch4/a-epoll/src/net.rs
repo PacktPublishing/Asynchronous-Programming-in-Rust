@@ -26,7 +26,7 @@ impl TcpStream {
         
         if res < 0 {
             // NB! see: https://man7.org/linux/man-pages/man2/read.2.html
-            // Several reported error codes must be espected and handled
+            // Several reported error codes must be expected and handled
             // like EAGAIN, EWOULDBLOCK
             return Err(std::io::Error::last_os_error());
         };
