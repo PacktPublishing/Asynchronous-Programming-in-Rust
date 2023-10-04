@@ -1,4 +1,4 @@
-use std::io::{self, Result};
+use std::{io::{self, Result}, thread::sleep, time::Duration};
 
 use net::TcpStream;
 use poll::Poll;
@@ -48,7 +48,7 @@ fn poll_in_loop() -> Result<()> {
             }
             Err(e) => {
                 println!("{e:?}");
-                std::thread::sleep(std::time::Duration::from_millis(100));
+                sleep(Duration::from_millis(100));
             }
         }
     }
