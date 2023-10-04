@@ -1,6 +1,6 @@
 use std::io::{self, Result};
 
-use crate::{ffi, net::{self, TcpStream}};
+use crate::{ffi, net::TcpStream};
 
 type Events = Vec<ffi::Event>;
 
@@ -23,15 +23,14 @@ impl Poll {
     pub fn registry(&self) -> &Registry {
         &self.registry
     }
-    
+
     /// Makes a blocking call to the OS parking the calling thread. It will wake up
     /// when one or more events we've registered interest in have occurred or
     /// the timeout duration has elapsed, whichever occurs first.
-    /// 
-    /// # Errors
-    /// If an error of the type `io::ErrorKind::Interrupted` is reported it
-    /// means that the call timed out. This error condition should be expected
-    /// and handled by the caller of this function.
+    ///
+    /// # Note
+    /// If the number of events returned is 0, the wakeup was due to an elapsed
+    /// timeout
     pub fn poll(&mut self, events: &mut Events, timeout: Option<i32>) -> Result<()> {
         let fd = self.registry.raw_fd;
         let timeout = timeout.unwrap_or(-1);
@@ -54,7 +53,7 @@ pub struct Registry {
 }
 
 impl Registry {
-    
+
     // NB! Mio inverts this, and `source` owns the register implementation
     pub fn register(&self, source: &TcpStream, token: usize, interests: i32) -> Result<()> {
         let mut event = ffi::Event {
@@ -66,7 +65,7 @@ impl Registry {
         let res = unsafe {
             ffi::epoll_ctl(self.raw_fd, op, source.as_raw_fd(), &mut event)
         };
-        
+
         if res < 0 {
             return Err(io::Error::last_os_error());
         }
@@ -77,7 +76,7 @@ impl Registry {
 impl Drop for Registry {
     fn drop(&mut self) {
         let res = unsafe { ffi::close(self.raw_fd) };
-        
+
         if res < 0 {
             // Note! Mio logs the error but does not panic!
             let err = io::Error::last_os_error();
