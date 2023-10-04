@@ -1,4 +1,4 @@
-use std::io::Result;
+use std::io::{self, Result};
 
 use crate::{ffi, net::{self, TcpStream}};
 
@@ -12,7 +12,7 @@ impl Poll {
     pub fn new() -> Result<Self> {
         let res = unsafe { ffi::epoll_create(1) };
         if res < 0 {
-            return Err(std::io::Error::last_os_error());
+            return Err(io::Error::last_os_error());
         }
 
         Ok(Self {
@@ -39,7 +39,7 @@ impl Poll {
         let res = unsafe { ffi::epoll_wait(fd, events.as_mut_ptr(), max_events, timeout) };
 
         if res < 0 {
-            return Err(std::io::Error::last_os_error());
+            return Err(io::Error::last_os_error());
         };
 
         // This is safe because epol_wait ensures that `res` events are assigned.
@@ -68,7 +68,7 @@ impl Registry {
         };
         
         if res < 0 {
-            return Err(std::io::Error::last_os_error());
+            return Err(io::Error::last_os_error());
         }
         Ok(())
     }
@@ -77,9 +77,11 @@ impl Registry {
 impl Drop for Registry {
     fn drop(&mut self) {
         let res = unsafe { ffi::close(self.raw_fd) };
+        
         if res < 0 {
             // Note! Mio logs the error but does not panic!
-            panic!("{}", std::io::Error::last_os_error());
+            let err = io::Error::last_os_error();
+            println!("ERROR: {err:?}", );
         }
     }
 }

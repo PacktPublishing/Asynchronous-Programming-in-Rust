@@ -11,8 +11,18 @@ in the delayserver folder run:
 cargo run delayserver
 ```
 
-Alternatively, you can install the 
+Delay server works by issuing a http GET request in the format: 
 
-Delay server works by issuing a http GET request in the format: \"http://localhost:8080/[delay in ms]/[HtmlEncoded meesage]\"\n
-On reception, it immidiately reports the following to the console: {Message #} - {delay in ms}: {message}\n.
-The server then delays the response for the requested time and echoes the message back to the caller.\n\n
+```
+http://localhost:8080/[delay in ms]/[UrlEncoded meesage]
+```
+
+On reception, it immidiately reports the following to the console: 
+
+```
+{Message #} - {delay in ms}: {message}
+```
+
+The server then delays the response for the requested time and echoes the message back to the caller.
+
+Please note that the message must be **Url** encoded (i.e. a space is encoded as `%20`).
