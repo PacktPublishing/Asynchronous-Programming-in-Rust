@@ -4,15 +4,13 @@ use mio::event::Event;
 use mio::net::TcpStream;
 use mio::{Interest, Poll, Token};
 
-fn get_req(url_part: &str) -> Vec<u8> {
+fn get_req(path: &str) -> String {
     format!(
-        "GET {url_part} HTTP/1.1\r\n\
+        "GET {path} HTTP/1.1\r\n\
              Host: localhost\r\n\
              Connection: close\r\n\
              \r\n"
     )
-    .bytes()
-    .collect()
 }
 
 fn handle_events(events: &[Event], streams: &mut [TcpStream]) -> Result<usize> {
@@ -48,8 +46,8 @@ fn main() -> Result<()> {
 
     for i in 0..n_events {
         let delay = (n_events - i) * 1000;
-        let url_part = format!("/{delay}/request-{i}");
-        let request = get_req(&url_part);
+        let url_path = format!("/{delay}/request-{i}");
+        let request = get_req(&url_path);
         let std_stream = std::net::TcpStream::connect(addr)?;
         std_stream.set_nonblocking(true)?;
 
@@ -58,7 +56,7 @@ fn main() -> Result<()> {
         let mut stream = TcpStream::from_std(std_stream);
         // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        stream.write_all(&request)?;
+        stream.write_all(request.as_bytes())?;
 
         // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         // Slightly different arguments. `Token` is a wrapper so we just wrap the value
