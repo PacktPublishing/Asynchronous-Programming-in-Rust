@@ -18,10 +18,10 @@ fn get_req(url_part: &str) -> Vec<u8> {
 fn handle_events(events: &[Event], streams: &mut [TcpStream]) -> Result<usize> {
     let mut handled_events = 0;
     for event in events {
-        // ------------------------------------------------------------------------------
+        // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         // We need to extract the value we wrapped in Token
         let index: usize = event.token().into();
-        // ------------------------------------------------------------------------------
+        // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         let mut data = vec![];
 
         match streams[index].read_to_end(&mut data) {
@@ -31,8 +31,6 @@ fn handle_events(events: &[Event], streams: &mut [TcpStream]) -> Result<usize> {
                 println!("{txt}\n------\n");
                 handled_events += 1;
             }
-            // Not ready to read in a non-blocking manner. This could
-            // happen even if the event was reported as ready
             Err(e) if e.kind() == io::ErrorKind::WouldBlock => (),
             Err(e) => return Err(e),
         }
@@ -54,25 +52,31 @@ fn main() -> Result<()> {
         let request = get_req(&url_part);
         let std_stream = std::net::TcpStream::connect(addr)?;
         std_stream.set_nonblocking(true)?;
+
+        // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // Mio wraps `std::net::TcpStream`
         let mut stream = TcpStream::from_std(std_stream);
+        // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         stream.write_all(&request)?;
-        // ------------------------------------------------------------------------------
+
+        // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         // Slightly different arguments. `Token` is a wrapper so we just wrap the value
-        // Interests are expressed as an enum in Mio and not constants like we did
+        // Interests are expressed slightly different but boil down to the same
+        // arguments to `epoll_ctl`
         poll.registry()
             .register(&mut stream, Token(i), Interest::READABLE)?;
-        // ------------------------------------------------------------------------------
+        // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         streams.push(stream);
     }
 
     let mut handled_events = 0;
     while handled_events < n_events {
-        // ------------------------------------------------------------------------------
+        // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         // Mio has it's own collection type instead of Vec<Event>
         let mut events = mio::Events::with_capacity(10);
-        // ------------------------------------------------------------------------------
+        // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         poll.poll(&mut events, None)?;
 
         if events.is_empty() {
@@ -80,11 +84,11 @@ fn main() -> Result<()> {
             continue;
         }
 
-        // ------------------------------------------------------------------------------
+        // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         // To make minimal changes to the existing code we create a Vec<Event> from mio's
         // Events collection
         let events: Vec<Event> = events.into_iter().map(|e| e.clone()).collect();
-        // ------------------------------------------------------------------------------
+        // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         handled_events += handle_events(&events, &mut streams)?;
     }

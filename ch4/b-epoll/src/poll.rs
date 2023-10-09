@@ -1,6 +1,6 @@
-use std::io::{self, Result};
+use std::{io::{self, Result}, net::TcpStream, os::fd::AsRawFd};
 
-use crate::{ffi, net::TcpStream};
+use crate::ffi;
 
 type Events = Vec<ffi::Event>;
 
@@ -80,7 +80,7 @@ impl Drop for Registry {
         if res < 0 {
             // Note! Mio logs the error but does not panic!
             let err = io::Error::last_os_error();
-            println!("ERROR: {err:?}", );
+            println!("ERROR: {err:?}");
         }
     }
 }

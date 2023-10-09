@@ -1,11 +1,9 @@
-use std::io::{self, Read, Result, Write};
+use std::{io::{self, Read, Result, Write}, net::TcpStream};
 
 use ffi::Event;
-use net::TcpStream;
 use poll::Poll;
 
 mod ffi;
-mod net;
 mod poll;
 
 /// Not the entire url, but everyhing after the domain addr
@@ -20,6 +18,7 @@ fn get_req(url_part: &str) -> Vec<u8> {
     .bytes()
     .collect()
 }
+
 
 fn handle_events(events: &[Event], streams: &mut [TcpStream]) -> Result<usize> {
     let mut handled_events = 0;
@@ -48,8 +47,6 @@ fn main() -> Result<()> {
     let mut poll = Poll::new()?;
     let n_events = 5;
 
-    //let mut streams = send_requests(&poll, n_events)?;
-
     let mut streams = vec![];
     let addr = "localhost:8080";
 
@@ -57,9 +54,8 @@ fn main() -> Result<()> {
         let delay = (n_events - i) * 1000;
         let url_part = format!("/{delay}/request-{i}");
         let request = get_req(&url_part);
-        let std_stream = std::net::TcpStream::connect(addr)?;
-        std_stream.set_nonblocking(true)?;
-        let mut stream = TcpStream::from_std(std_stream);
+        let mut stream = std::net::TcpStream::connect(addr)?;
+        stream.set_nonblocking(true)?;
 
         stream.write_all(&request)?;
         // NB! Token is equal to index in Vec
