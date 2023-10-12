@@ -80,7 +80,7 @@ impl Drop for Registry {
         if res < 0 {
             // Note! Mio logs the error but does not panic!
             let err = io::Error::last_os_error();
-            eprintln!("ERROR: {err:?}");
+            println!("ERROR: {err:?}");
         }
     }
 }
