@@ -1,6 +1,6 @@
 pub const EPOLL_CTL_ADD: i32 = 1;
 pub const EPOLLIN: i32 = 0x1;
-pub const EPOLLONESHOT: i32 = 0x40000000;
+pub const EPOLLET: i32 = 1 << 31;
 
 #[link(name = "c")]
 extern "C" {

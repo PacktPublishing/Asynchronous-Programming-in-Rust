@@ -20,17 +20,22 @@ fn handle_events(events: &[Event], streams: &mut [TcpStream]) -> Result<usize> {
         // We need to extract the value we wrapped in Token
         let index: usize = event.token().into();
         // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        let mut data = vec![];
+        let mut data = vec![0u8; 4096];
+        loop {
+            match streams[index].read(&mut data) {
+                Ok(n) if n == 0 => {
+                    handled_events += 1;
+                    break;
+                }
+                Ok(n) => {
+                    let txt = String::from_utf8_lossy(&data[..n]);
 
-        match streams[index].read_to_end(&mut data) {
-            Ok(n) => {
-                let txt = String::from_utf8_lossy(&data[..n]);
-                println!("RECEIVED: {:?}", event);
-                println!("{txt}\n------\n");
-                handled_events += 1;
+                    println!("RECEIVED: {:?}", event);
+                    println!("{txt}\n------\n");
+                }
+                Err(e) if e.kind() == io::ErrorKind::WouldBlock => break,
+                Err(e) => return Err(e),
             }
-            Err(e) if e.kind() == io::ErrorKind::WouldBlock => (),
-            Err(e) => return Err(e),
         }
     }
 

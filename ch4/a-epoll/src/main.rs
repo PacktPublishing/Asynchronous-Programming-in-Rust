@@ -8,15 +8,14 @@ mod poll;
 
 /// Not the entire url, but everyhing after the domain addr
 /// i.e. http://localhost/1000/hello => /1000/hello
-fn get_req(url_part: &str) -> Vec<u8> {
+fn get_req(path: &str) -> String {
     format!(
-        "GET {url_part} HTTP/1.1\r\n\
+        "GET {path} HTTP/1.1\r\n\
              Host: localhost\r\n\
              Connection: close\r\n\
              \r\n"
     )
-    .bytes()
-    .collect()
+
 }
 
 fn main() -> Result<()> {
@@ -27,12 +26,12 @@ fn main() -> Result<()> {
 
     for i in 0..n_events {
         let delay = (n_events - i) * 1000;
-        let url_part = format!("/{delay}/request-{i}");
-        let request = get_req(&url_part);
+        let url_path = format!("/{delay}/request-{i}");
+        let request = get_req(&url_path);
         let mut stream = std::net::TcpStream::connect(addr)?;
         stream.set_nonblocking(true)?;
 
-        stream.write_all(&request)?;
+        stream.write_all(request.as_bytes())?;
         streams.push(stream);
     }
 
