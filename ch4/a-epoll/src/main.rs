@@ -39,6 +39,10 @@ fn handle_events(events: &[Event], streams: &mut [TcpStream]) -> Result<usize> {
                     println!("{txt}\n------\n");
                 }
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock => break,
+                // this was not in the book example, but it's a error condition
+                // you probably want to handle in some way (either by breaking
+                // out of the loop or trying a new read call immidiately)
+                Err(e) if e.kind() == io::ErrorKind::Interrupted => break,
                 Err(e) => return Err(e),
             }
         }

@@ -1,7 +1,9 @@
-# a-epoll
+# a-epoll-mio
 
-This create contains the example code for chapter 4. The code here contains some
-additional comments that's not in the book.
+This create contains the example code for chapter 4, but instead of using
+our own queue, we use one created by [mio](https://github.com/tokio-rs/mio). Since we modelled our own code after
+mio you only need to make a few very minor changes to get it working which I've
+commented and marked out as clearly as I can.
 
 You can run the example by simply writing `cargo run`
 
