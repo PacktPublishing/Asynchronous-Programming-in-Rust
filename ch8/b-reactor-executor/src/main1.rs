@@ -54,11 +54,66 @@ fn get_req(path: &str) -> String {
 trait Prom {
     // What promise resolves into
     type Item;
-    type Data;
     fn resolve(&mut self) -> PromiseState<Self::Item>;
-    fn set_data(&mut self, data: Self::Data);
+    fn then<F, B>(self, f: F) -> Then<Self, B, F>
+    where
+        F: FnOnce(Self::Item) -> B,
+        B: IntoProm,
+        Self: Sized,
+    {
+        Then::new(self, f)
+    }
 }
 
+struct Then<A, B, F> {
+    current: A,
+    op: F,
+    _marker: PhantomData<B>,
+}
+
+impl<A, B, F> Then<A, B, F>
+where
+    A: Prom,
+    F: FnOnce(A::Item) -> B,
+    B: IntoProm,
+{
+    fn new(current: A, f: F) -> Self {
+        Then {
+            current,
+            op: f,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<A,B,F> Prom for Then<A, B, F>
+where
+    A: Prom,
+    F: FnOnce(A::Item) -> B,
+    B: IntoProm,
+{
+    type Item = A::Item;
+
+    fn resolve(&mut self) -> PromiseState<Self::Item> {
+        (self.op)()
+    }
+}
+
+trait IntoProm {
+    type Prom: Prom<Item = Self::Item>;
+    type Item;
+    fn into_prom(self) -> Self::Prom;
+}
+
+impl<P: Prom> IntoProm for P {
+    type Prom = P;
+
+    type Item = P::Item;
+
+    fn into_prom(self) -> Self::Prom {
+        self
+    }
+}
 
 enum PromiseState<T> {
     Ready(T),
@@ -73,17 +128,10 @@ impl LeafPromise {
     fn new(stream: mio::net::TcpStream) -> Self {
         Self { stream }
     }
-
-    fn then(self, op: impl FnOnce(String) -> ()) -> impl Prom {
-        let next = NonLeafPromise {
-
-        }
-    }
 }
 
 impl Prom for LeafPromise {
     type Item = String;
-    type Data = ();
 
     fn resolve(&mut self) -> PromiseState<Self::Item> {
         let mut s = String::new();
@@ -93,61 +141,17 @@ impl Prom for LeafPromise {
             Err(e) => panic!("{e:?}"),
         }
     }
-
-    fn set_data(&mut self, data: Self::Data) {
-    }
 }
 
-struct NonLeafPromise {
-    data: Option<String>,
-    op: Option<Box<dyn FnOnce(String) -> ()>>
-}
+struct PromiseResolved;
 
-impl Prom for NonLeafPromise {
+impl Prom for PromiseResolved {
     type Item = ();
-    type Data = String;
 
     fn resolve(&mut self) -> PromiseState<Self::Item> {
-        let op = self.op.take().unwrap();
-        op(self.data.take().unwrap());
         PromiseState::Ready(())
-
-    }
-
-    fn set_data(&mut self, data: Self::Data) {
-        self.data = Some(data);
     }
 }
-
-struct Chained<A: Prom, B: Prom> {
-    current: A,
-    next: B,
-}
-
-impl<A: Prom, B: Prom> Prom for Chained<A, B> {
-    type Item = B::Item;
-
-    fn resolve(&mut self) -> PromiseState<Self::Item> {
-        match self.current.resolve() {
-            PromiseState::Ready(txt) => {
-                self.next.set_data(txt);
-                self.next.resolve()
-            }
-
-            PromiseState::NotReady => PromiseState::NotReady,
-        }
-    }
-}
-
-// struct PromiseResolved;
-
-// impl Prom for PromiseResolved {
-//     type Item = ();
-
-//     fn resolve(&mut self) -> PromiseState<Self::Item> {
-//         PromiseState::Ready(())
-//     }
-// }
 
 // struct Promise<T> {
 //     state: PromiseState,
