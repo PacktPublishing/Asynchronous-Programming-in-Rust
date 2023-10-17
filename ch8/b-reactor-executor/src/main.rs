@@ -1,28 +1,26 @@
-use std::io::{Write, Read, self};
+use std::{io::{Write, Read, self}, collections::HashMap, sync::{Mutex, Arc}};
 
 
 fn main() {
     let p = Promise::Pending;
     p.then(|| {
-        let stream = std::net::TcpStream::connect("localhost:8080").unwrap();
-        stream.set_nonblocking(true).unwrap();
-        let mut stream = mio::net::TcpStream::from_std(stream);
-        stream.write_all(get_req("/1000/helloworld").as_bytes()).unwrap();
-        let mut s = String::new();
-        match stream.read_to_string(&mut s) {
-            Ok(_) => {
-                println!("DATA: {s}");
-                Promise::Fulfilled
-            }
+        // let stream = std::net::TcpStream::connect("localhost:8080").unwrap();
+        // stream.set_nonblocking(true).unwrap();
+        // let mut stream = mio::net::TcpStream::from_std(stream);
+        // stream.write_all(get_req("/1000/helloworld").as_bytes()).unwrap();
+        // let mut s = String::new();
+        // match stream.read_to_string(&mut s) {
+        //     Ok(_) => {
+        //         println!("DATA: {s}");
+        //         Promise::Fulfilled
+        //     }
             
-            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+        //     Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
                 
-            },
-            Err(e) => panic!("{e:?}"),
-        }
-    });
-    
-    
+        //     },
+        //     Err(e) => panic!("{e:?}"),
+        // }
+    });  
 }
 
 fn get_req(path: &str) -> String {
@@ -34,16 +32,37 @@ fn get_req(path: &str) -> String {
     )
 }
 
-enum Promise {
-    Fulfilled,
-    Pending(Option<Box<dyn FnOnce(mio::net::TcpStream)>>),
+struct Executor {
+    tasks: Arc<Mutex<HashMap<usize, Promise>>>,
 }
 
-impl Promise {
-    fn then(self, cb: impl FnOnce() -> Self) -> Self {
-        match self {
-            Promise::Fulfilled => Promise::Fulfilled,
-            Promise::Pending => cb()
+impl Executor {
+    pub fn spawn(&self, p: Promise) {
+        self.tasks.lock().map(|mut tasks| tasks.insert(1, p)).unwrap();
+    }
+    
+    pub fn run(&self) {
+        
+    }
+}
+
+struct StreamTask {
+    id: usize,
+    promise: StreamPromise,
+}
+
+enum StreamPromise {
+    Fulfilled,
+    Pending(usize),
+}
+
+impl StreamPromise {
+    fn then(self, cb: impl FnOnce(mio::net::TcpStream) -> Self) -> Self {
+        match cb() {
+            Self::Fulfilled => Self::Fulfilled,
+            Self::Pending(id) => {
+                
+            }
         }
     }
 }
