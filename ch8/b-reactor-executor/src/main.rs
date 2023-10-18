@@ -5,42 +5,36 @@ use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
-    },
+    }, thread, time::Duration,
 };
 
-fn main() {
+later fn async_main() {
     let stream = std::net::TcpStream::connect("localhost:8080").unwrap();
     stream.set_nonblocking(true).unwrap();
     let mut stream = mio::net::TcpStream::from_std(stream);
-    stream
-        .write_all(get_req("/1000/helloworld").as_bytes())
-        .unwrap();
-    let mut prom = LeafPromise::new(stream);
+    let mut txt = String::new();
+    manjana stream.read_to_string(&mut txt);
+    println!("{txt}");
+}
 
-    let fut = prom.then(|txt| {
-        println!("Inside THEN");
-        println!("{txt}");
-        PromiseResolved
-    });
-
-    //p.then(|| {
-    // let stream = std::net::TcpStream::connect("localhost:8080").unwrap();
-    // stream.set_nonblocking(true).unwrap();
-    // let mut stream = mio::net::TcpStream::from_std(stream);
-    // stream.write_all(get_req("/1000/helloworld").as_bytes()).unwrap();
-    // let mut s = String::new();
-    // match stream.read_to_string(&mut s) {
-    //     Ok(_) => {
-    //         println!("DATA: {s}");
-    //         Promise::Fulfilled
-    //     }
-
-    //     Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
-
-    //     },
-    //     Err(e) => panic!("{e:?}"),
-    // }
-    //});
+fn main() {
+    
+    let mut future = NonLeafFuture::new();
+    
+    let txt = loop {
+        match future.poll() {
+            PollState::NotReady => {
+                println!("NotReady");
+                // call executor sleep
+                thread::sleep(Duration::from_millis(200));
+            }
+            
+            PollState::Ready(s) => break s,
+        }
+    };
+    
+    println!("{txt}");
+    println!("Finished");
 }
 
 fn get_req(path: &str) -> String {
@@ -51,93 +45,173 @@ fn get_req(path: &str) -> String {
              \r\n"
     )
 }
-trait Prom {
-    // What promise resolves into
-    type Item;
-    type Data;
-    fn resolve(&mut self) -> PromiseState<Self::Item>;
-    fn set_data(&mut self, data: Self::Data);
+
+enum LeafFuture {
+    Step1(mio::net::TcpStream),
+    Resolved,
 }
 
+impl Future for LeafFuture {
+    type Output = String;
+    fn poll(&mut self) -> PollState<Self::Output> {
+        match self {
+            Self::Step1(ref mut stream) => {
+                let mut s = String::new();
+                match stream.read_to_string(&mut s) {
+                    Ok(_) => {
+                        *self = LeafFuture::Resolved;
+                        PollState::Ready(s)
+                    },
+                    Err(e) if e.kind() == ErrorKind::WouldBlock => PollState::NotReady,
+                    Err(e) => panic!("e:?"),
+                }
+            }
+            
+            Self::Resolved => panic!("Polled a futures that's finished!"),
+        }
+    }
+}
 
-enum PromiseState<T> {
+enum NonLeafFuture {
+    Step1,
+    Step2(Box<dyn Future>),
+    Resolved,
+}
+
+impl NonLeafFuture {
+    fn new() -> Self {
+        Self::Step1
+    }
+}
+
+impl Future for NonLeafFuture {
+    type Output = ();
+
+    fn poll(&mut self) -> PollState<Self::Output> {
+        match self {
+            NonLeafFuture::Step1 => {
+                let stream = std::net::TcpStream::connect("localhost:8080").unwrap();
+                stream.set_nonblocking(true).unwrap();
+                let mut stream = mio::net::TcpStream::from_std(stream);
+                stream
+                    .write_all(get_req("/1000/helloworld").as_bytes())
+                    .unwrap();
+                let leaf = LeafFuture::Step1(stream);
+                *self = NonLeafFuture::Step2(Box::new(leaf));  
+                PollState::NotReady 
+            }
+            
+            NonLeafFuture::Step2(ref mut leaf) => match leaf.poll() {
+                PollState::Ready(txt) => {
+                    *self = NonLeafFuture::Resolved;
+                    PollState::Ready(txt)
+                }
+                
+                PollState::NotReady => PollState::NotReady,
+            }
+            
+            NonLeafFuture::Resolved => panic!("Polled a future that's finished"),
+        }
+    }
+}
+
+trait Future {
+    type Output;
+
+    fn poll(&mut self) -> PollState<Self::Output>;
+}
+
+enum PollState<T> {
     Ready(T),
     NotReady,
 }
 
-struct LeafPromise {
-    stream: mio::net::TcpStream,
-}
+// trait Prom {
+//     // What promise resolves into
+//     type Item;
+//     type Data;
+//     fn resolve(&mut self) -> PromiseState<Self::Item>;
+//     fn set_data(&mut self, data: Self::Data);
+// }
 
-impl LeafPromise {
-    fn new(stream: mio::net::TcpStream) -> Self {
-        Self { stream }
-    }
+// enum PromiseState<T> {
+//     Ready(T),
+//     NotReady,
+// }
 
-    fn then(self, op: impl FnOnce(String) -> ()) -> impl Prom {
-        let next = NonLeafPromise {
+// struct LeafPromise {
+//     stream: mio::net::TcpStream,
+// }
 
-        }
-    }
-}
+// impl LeafPromise {
+//     fn new(stream: mio::net::TcpStream) -> Self {
+//         Self { stream }
+//     }
 
-impl Prom for LeafPromise {
-    type Item = String;
-    type Data = ();
+//     fn then(self, op: impl FnOnce(String) -> ()) -> impl Prom {
+//         let next = NonLeafPromise {
 
-    fn resolve(&mut self) -> PromiseState<Self::Item> {
-        let mut s = String::new();
-        match self.stream.read_to_string(&mut s) {
-            Ok(_) => PromiseState::Ready(s),
-            Err(e) if e.kind() == ErrorKind::WouldBlock => PromiseState::NotReady,
-            Err(e) => panic!("{e:?}"),
-        }
-    }
+//         }
+//     }
+// }
 
-    fn set_data(&mut self, data: Self::Data) {
-    }
-}
+// impl Prom for LeafPromise {
+//     type Item = String;
+//     type Data = ();
 
-struct NonLeafPromise {
-    data: Option<String>,
-    op: Option<Box<dyn FnOnce(String) -> ()>>
-}
+//     fn resolve(&mut self) -> PromiseState<Self::Item> {
+//         let mut s = String::new();
+//         match self.stream.read_to_string(&mut s) {
+//             Ok(_) => PromiseState::Ready(s),
+//             Err(e) if e.kind() == ErrorKind::WouldBlock => PromiseState::NotReady,
+//             Err(e) => panic!("{e:?}"),
+//         }
+//     }
 
-impl Prom for NonLeafPromise {
-    type Item = ();
-    type Data = String;
+//     fn set_data(&mut self, data: Self::Data) {
+//     }
+// }
 
-    fn resolve(&mut self) -> PromiseState<Self::Item> {
-        let op = self.op.take().unwrap();
-        op(self.data.take().unwrap());
-        PromiseState::Ready(())
+// struct NonLeafPromise {
+//     data: Option<String>,
+//     op: Option<Box<dyn FnOnce(String) -> ()>>
+// }
 
-    }
+// impl Prom for NonLeafPromise {
+//     type Item = ();
+//     type Data = String;
 
-    fn set_data(&mut self, data: Self::Data) {
-        self.data = Some(data);
-    }
-}
+//     fn resolve(&mut self) -> PromiseState<Self::Item> {
+//         let op = self.op.take().unwrap();
+//         op(self.data.take().unwrap());
+//         PromiseState::Ready(())
 
-struct Chained<A: Prom, B: Prom> {
-    current: A,
-    next: B,
-}
+//     }
 
-impl<A: Prom, B: Prom> Prom for Chained<A, B> {
-    type Item = B::Item;
+//     fn set_data(&mut self, data: Self::Data) {
+//         self.data = Some(data);
+//     }
+// }
 
-    fn resolve(&mut self) -> PromiseState<Self::Item> {
-        match self.current.resolve() {
-            PromiseState::Ready(txt) => {
-                self.next.set_data(txt);
-                self.next.resolve()
-            }
+// struct Chained<A: Prom, B: Prom> {
+//     current: A,
+//     next: B,
+// }
 
-            PromiseState::NotReady => PromiseState::NotReady,
-        }
-    }
-}
+// impl<A: Prom, B: Prom> Prom for Chained<A, B> {
+//     type Item = B::Item;
+
+//     fn resolve(&mut self) -> PromiseState<Self::Item> {
+//         match self.current.resolve() {
+//             PromiseState::Ready(txt) => {
+//                 self.next.set_data(txt);
+//                 self.next.resolve()
+//             }
+
+//             PromiseState::NotReady => PromiseState::NotReady,
+//         }
+//     }
+// }
 
 // struct PromiseResolved;
 
