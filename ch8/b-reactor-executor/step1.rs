@@ -75,48 +75,37 @@ impl Future for HttpGetFuture {
     }
 }
 
-enum MyOneStageFut<A> {
-    Start(Box<dyn FnOnce() -> Box<dyn Future<Output = A>>>, Box<dyn FnOnce(A)>),
-    Wait1(Box<dyn Future<Output = A>>, Box<dyn FnOnce(A)>),
+enum MyOneStageFut {
+    Start,
+    Wait1(Box<dyn Future<Output = String>>),
     Resolved,
 }
 
-impl<A> MyOneStageFut<A> {
-    fn new<F, H>(op1: F, op2: H) -> Self 
-    where 
-    F: (FnOnce()-> Box<dyn Future<Output = A>>) + 'static,
-    H:  FnOnce(A) + 'static,
-    {
-        Self::Start(Box::new(op1), Box::new(op2))
+impl MyOneStageFut {
+    fn new() -> Self {
+        Self::Start
     }
 }
 
-impl<A> Future for MyOneStageFut<A> {
+impl Future for MyOneStageFut {
     type Output = ();
 
     fn poll(&mut self) -> PollState<Self::Output> {
-        let mut this = std::mem::replace(self, Self::Resolved);
-        match this {
-            Self::Start(op, op2) => {
-                let fut = op();
-                *self = MyOneStageFut::Wait1(fut, op2);
+        match self {
+            Self::Start => {
+                println!("Async start");
+                *self = MyOneStageFut::Wait1(Box::new(Http::get("/500/HelloWorld")));
                 PollState::NotReady
             }
 
-            Self::Wait1(ref mut fut, ref mut op) => {
+            Self::Wait1(ref mut fut) => {
                 let s = match fut.poll() {
                     PollState::Ready(s) => s,
-                    PollState::NotReady => {
-                        *self = this;
-                        return PollState::NotReady;
-                    },
+                    PollState::NotReady => return PollState::NotReady,
                 };
-                
-                let op = std::mem::replace(op, Box::new(|_|{}));
-                
-                op(s);
 
-                
+                println!("GOT DATA");
+                println!("{s}");
 
                 *self = Self::Resolved;
                 PollState::Ready(())
@@ -126,26 +115,6 @@ impl<A> Future for MyOneStageFut<A> {
         }
     }
 }
-
-// enum MyTwoStageFut {
-//     Start(Box<dyn Future<Output = ()>>, Box<dyn Future<Output = ()>>),
-//     Wait1(Box<dyn Future<Output = ()>>, Box<dyn Future<Output = ()>>),
-//     Wait2(Box<dyn Future<Output = ()>>),
-//     Resolved,
-// }
-
-// impl Future for MyTwoStageFut {
-//     type Output = ();
-
-//     fn poll(&mut self) -> PollState<Self::Output> {
-//         match self {
-//             Self::Start(f1, f2) => {
-                
-//             }
-//         }
-//     }
-    
-// }
 
 trait Future {
     type Output;
@@ -159,13 +128,7 @@ enum PollState<T> {
 }
 
 fn async_main() -> impl Future<Output = ()> {
-    MyOneStageFut::new(move || {
-        println!("OP1 -STARTED");
-        Box::new(Http::get("/500/HelloWorld"))
-    }, move |s| {
-                println!("GOT DATA");
-                println!("{s}");
-    })
+    MyOneStageFut::new()
 }
 
 fn main() {
