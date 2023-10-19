@@ -4,6 +4,8 @@ use std::{
     time::Duration,
 };
 
+use runtime::join_all;
+
 // later fn async_main() {
 //     println!("Program starting")
 //     let http = Http::new();
@@ -12,6 +14,17 @@ use std::{
 //     println!("{txt}");
 //     println!("{txt2}");
 // }
+
+fn get_req(path: &str) -> String {
+    format!(
+        "GET {path} HTTP/1.1\r\n\
+             Host: localhost\r\n\
+             Connection: close\r\n\
+             \r\n"
+    )
+}
+
+
 
 struct Http;
 
@@ -69,6 +82,10 @@ impl Future for HttpGetFuture {
                     break PollState::NotReady;
                 }
 
+                Err(e) if e.kind() == ErrorKind::Interrupted => {
+                    continue;
+                }
+
                 Err(e) => panic!("{e:?}"),
             }
         }
@@ -78,12 +95,12 @@ impl Future for HttpGetFuture {
 enum MyOneStageFut {
     Start(&'static str),
     Wait1(Box<dyn Future<Output = String>>),
+    Wait2(Box<dyn Future<Output = String>>),
     Resolved,
 }
 
 impl MyOneStageFut {
-    fn new<>(path: &'static str) -> Self
-    {
+    fn new(path: &'static str) -> Self {
         Self::Start(path)
     }
 }
@@ -96,6 +113,7 @@ impl Future for MyOneStageFut {
         match this {
             Self::Start(path) => {
                 println!("OP1 -STARTED");
+
                 let fut = Box::new(Http::get(path));
                 *self = MyOneStageFut::Wait1(fut);
                 PollState::NotReady
@@ -107,7 +125,7 @@ impl Future for MyOneStageFut {
                     PollState::NotReady => {
                         *self = this;
                         return PollState::NotReady;
-                    },
+                    }
                 };
                 println!("GOT DATA");
                 println!("{s}");
@@ -121,39 +139,19 @@ impl Future for MyOneStageFut {
     }
 }
 
-// enum MyTwoStageFut {
-//     Start(Box<dyn Future<Output = ()>>, Box<dyn Future<Output = ()>>),
-//     Wait1(Box<dyn Future<Output = ()>>, Box<dyn Future<Output = ()>>),
-//     Wait2(Box<dyn Future<Output = ()>>),
-//     Resolved,
-// }
 
-// impl Future for MyTwoStageFut {
-//     type Output = ();
-
-//     fn poll(&mut self) -> PollState<Self::Output> {
-//         match self {
-//             Self::Start(f1, f2) => {
-
-//             }
-//         }
-//     }
-
-// }
-
-trait Future {
+pub trait Future {
     type Output;
-
     fn poll(&mut self) -> PollState<Self::Output>;
 }
 
-enum PollState<T> {
+pub enum PollState<T> {
     Ready(T),
     NotReady,
 }
 
 fn async_main() -> impl Future<Output = ()> {
-    MyOneStageFut::new("/500/Hello1")
+    MyOneStageFut::new("/2000/Hello1")
 }
 
 fn main() {
@@ -164,19 +162,54 @@ fn main() {
             PollState::NotReady => {
                 println!("NotReady");
                 // call executor sleep
-                thread::sleep(Duration::from_millis(100));
+                thread::sleep(Duration::from_millis(200));
             }
 
             PollState::Ready(s) => break s,
         }
-    };
+    }
 }
 
-fn get_req(path: &str) -> String {
-    format!(
-        "GET {path} HTTP/1.1\r\n\
-             Host: localhost\r\n\
-             Connection: close\r\n\
-             \r\n"
-    )
+mod runtime {
+    use super::*;
+
+    pub fn join_all<F: Future>(futures: Vec<F>) -> JoinAll<F> {
+        let futures = futures.into_iter().map(|f| (false, f)).collect();
+        JoinAll {
+            futures,
+            finished_count: 0,
+        }
+    }
+
+    pub struct JoinAll<F: Future> {
+        futures: Vec<(bool, F)>,
+        finished_count: usize,
+    }
+
+    impl<F: Future> Future for JoinAll<F> {
+        type Output = ();
+
+        fn poll(&mut self) -> PollState<Self::Output> {
+            for (finished, fut) in self.futures.iter_mut() {
+                if *finished {
+                    continue;
+                }
+
+                match fut.poll() {
+                    PollState::Ready(_) => {
+                        *finished = true;
+                        self.finished_count += 1;
+                    }
+
+                    PollState::NotReady => continue,
+                }
+            }
+
+            if self.finished_count == self.futures.len() {
+                PollState::Ready(())
+            } else {
+                PollState::NotReady
+            }
+        }
+    }
 }

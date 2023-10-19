@@ -1,19 +1,8 @@
 use std::{
     io::{ErrorKind, Read, Write},
-    mem::MaybeUninit,
     thread,
     time::Duration,
 };
-
-
-// THOUGHTS
-//
-// Rewrite state machine to be a struct instead (easier to reason about)
-//
-// Implement the first example by hand
-// See if we can create an easy bulld.rs file that rewites very simple
-// examples using our own syntax to a state machine to explain what the
-// compiler does when it reaches async/await
 
 use runtime::join_all;
 
@@ -127,16 +116,8 @@ impl Future for HttpGetFuture {
 
 enum MyOneStageFut<'a> {
     Start,
-    Wait1(
-        Box<dyn Future<Output = String>>,
-        String,
-        Option<Formatter<'a>>,
-    ),
-    Wait2(
-        Box<dyn Future<Output = String>>,
-        String,
-        Option<Formatter<'a>>,
-    ),
+    Wait1(Box<dyn Future<Output = String>>, String, Formatter<'a>),
+    Wait2(Box<dyn Future<Output = String>>),
     Resolved,
 }
 
@@ -154,40 +135,29 @@ impl<'a> Future for MyOneStageFut<'a> {
         match this {
             Self::Start => {
                 println!("Program starting");
-                let buffer = String::new();
+                let mut buffer = String::new();
+                let formatter = Formatter::new(&mut buffer);
                 let fut = Box::new(Http::get("/1000/HelloWorld1"));
-                *self = MyOneStageFut::Wait1(fut, buffer, None);
-                if let Self::Wait1(_, ref mut buff, ref mut formatter) = self {
-                    let buff: *mut String = buff;
-                    // We rely on the pointer to buff has the same address or else
-                    // we dereference random data -> segfault -> UB -> BAD!
-                    let buff = unsafe { &mut *buff };
-                    *formatter = Some(Formatter::new(buff));
-                }
+                *self = MyOneStageFut::Wait1(fut, buffer, formatter);
                 PollState::NotReady
             }
 
-            Self::Wait1(mut fut, buffer, mut formatter) => {
+            Self::Wait1(ref mut fut, ref mut buffer, ref mut formatter) => {
                 let txt = match fut.poll() {
                     PollState::Ready(s) => s,
                     PollState::NotReady => {
-                        *self = MyOneStageFut::Wait1(fut, buffer, None);
-                        if let Self::Wait1(_, ref mut buff, ref mut formatter) = self {
-                            let buff: *mut String = buff;
-                            let buff = unsafe { &mut *buff };
-                            *formatter = Some(Formatter::new(buff));
-                        }
+                        *self = this;
                         return PollState::NotReady;
                     }
                 };
-                formatter.as_mut().unwrap().format(txt);
+                println!("{txt}");
 
                 let fut2 = Box::new(Http::get("/600/HelloWorld2"));
-                *self = Self::Wait2(fut2, buffer, formatter);
+                *self = Self::Wait2(fut2);
                 PollState::NotReady
             }
 
-            Self::Wait2(ref mut fut, ref mut buffer, ref mut formatter) => {
+            Self::Wait2(ref mut fut) => {
                 let txt2 = match fut.poll() {
                     PollState::Ready(s) => s,
                     PollState::NotReady => {
@@ -195,7 +165,7 @@ impl<'a> Future for MyOneStageFut<'a> {
                         return PollState::NotReady;
                     }
                 };
-                formatter.as_mut().unwrap().format(txt2);
+                println!("{txt2}");
                 *self = Self::Resolved;
                 PollState::Ready(())
             }
@@ -204,6 +174,7 @@ impl<'a> Future for MyOneStageFut<'a> {
         }
     }
 }
+
 
 pub trait Future {
     type Output;

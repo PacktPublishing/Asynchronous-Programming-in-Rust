@@ -4,14 +4,53 @@ use std::{
     time::Duration,
 };
 
+use runtime::join_all;
+
 // later fn async_main() {
 //     println!("Program starting")
+//     let mut buffer = String::new()
+//     let formatter = Formatter::new(&mut buffer);
 //     let http = Http::new();
-//     let txt = manjana http.get("/1000/HelloWorld");
-//     let txt2 = manjana http.get("500/HelloWorld2");
+//     let txt = siesta http.get("/1000/HelloWorld");
+//     formatter.format(txt);
+//     let txt2 = siesta http.get("500/HelloWorld2");
+//     formatter.format(txt2);
+//     println!("{}", buffer);
+// }
+
+// later fn async_main() {
+//     println!("Program starting")
+
+//     let http = Http::new();
+//     let txt = siesta http.get("/1000/HelloWorld");
 //     println!("{txt}");
+//     let txt2 = siesta http.get("500/HelloWorld2");
 //     println!("{txt2}");
 // }
+
+fn get_req(path: &str) -> String {
+    format!(
+        "GET {path} HTTP/1.1\r\n\
+             Host: localhost\r\n\
+             Connection: close\r\n\
+             \r\n"
+    )
+}
+
+struct Formatter<'a> {
+    buffer: &'a mut String,
+}
+
+impl<'a> Formatter<'a> {
+    fn new(buffer: &'a mut String) -> Self {
+        Self { buffer }
+    }
+    fn format(&mut self, txt: String) {
+        *self.buffer += "---------\n";
+        *self.buffer += &txt;
+        *self.buffer += "+++++++++\n";
+    }
+}
 
 struct Http;
 
@@ -76,15 +115,15 @@ impl Future for HttpGetFuture {
 }
 
 enum MyOneStageFut {
-    Start(&'static str),
+    Start,
     Wait1(Box<dyn Future<Output = String>>),
+    Wait2(Box<dyn Future<Output = String>>),
     Resolved,
 }
 
 impl MyOneStageFut {
-    fn new<>(path: &'static str) -> Self
-    {
-        Self::Start(path)
+    fn new() -> Self {
+        Self::Start
     }
 }
 
@@ -94,24 +133,37 @@ impl Future for MyOneStageFut {
     fn poll(&mut self) -> PollState<Self::Output> {
         let mut this = std::mem::replace(self, Self::Resolved);
         match this {
-            Self::Start(path) => {
-                println!("OP1 -STARTED");
-                let fut = Box::new(Http::get(path));
+            Self::Start => {
+                println!("Program starting");
+                let fut = Box::new(Http::get("/1000/HelloWorld1"));
                 *self = MyOneStageFut::Wait1(fut);
                 PollState::NotReady
             }
 
             Self::Wait1(ref mut fut) => {
-                let s = match fut.poll() {
+                let txt = match fut.poll() {
                     PollState::Ready(s) => s,
                     PollState::NotReady => {
                         *self = this;
                         return PollState::NotReady;
-                    },
+                    }
                 };
-                println!("GOT DATA");
-                println!("{s}");
+                println!("{txt}");
 
+                let fut2 = Box::new(Http::get("/600/HelloWorld2"));
+                *self = Self::Wait2(fut2);
+                PollState::NotReady
+            }
+
+            Self::Wait2(ref mut fut) => {
+                let txt2 = match fut.poll() {
+                    PollState::Ready(s) => s,
+                    PollState::NotReady => {
+                        *self = this;
+                        return PollState::NotReady;
+                    }
+                };
+                println!("{txt2}");
                 *self = Self::Resolved;
                 PollState::Ready(())
             }
@@ -121,39 +173,19 @@ impl Future for MyOneStageFut {
     }
 }
 
-// enum MyTwoStageFut {
-//     Start(Box<dyn Future<Output = ()>>, Box<dyn Future<Output = ()>>),
-//     Wait1(Box<dyn Future<Output = ()>>, Box<dyn Future<Output = ()>>),
-//     Wait2(Box<dyn Future<Output = ()>>),
-//     Resolved,
-// }
 
-// impl Future for MyTwoStageFut {
-//     type Output = ();
-
-//     fn poll(&mut self) -> PollState<Self::Output> {
-//         match self {
-//             Self::Start(f1, f2) => {
-
-//             }
-//         }
-//     }
-
-// }
-
-trait Future {
+pub trait Future {
     type Output;
-
     fn poll(&mut self) -> PollState<Self::Output>;
 }
 
-enum PollState<T> {
+pub enum PollState<T> {
     Ready(T),
     NotReady,
 }
 
 fn async_main() -> impl Future<Output = ()> {
-    MyOneStageFut::new("/500/Hello1")
+    MyOneStageFut::new()
 }
 
 fn main() {
@@ -164,19 +196,54 @@ fn main() {
             PollState::NotReady => {
                 println!("NotReady");
                 // call executor sleep
-                thread::sleep(Duration::from_millis(100));
+                thread::sleep(Duration::from_millis(200));
             }
 
             PollState::Ready(s) => break s,
         }
-    };
+    }
 }
 
-fn get_req(path: &str) -> String {
-    format!(
-        "GET {path} HTTP/1.1\r\n\
-             Host: localhost\r\n\
-             Connection: close\r\n\
-             \r\n"
-    )
+mod runtime {
+    use super::*;
+
+    pub fn join_all<F: Future>(futures: Vec<F>) -> JoinAll<F> {
+        let futures = futures.into_iter().map(|f| (false, f)).collect();
+        JoinAll {
+            futures,
+            finished_count: 0,
+        }
+    }
+
+    pub struct JoinAll<F: Future> {
+        futures: Vec<(bool, F)>,
+        finished_count: usize,
+    }
+
+    impl<F: Future> Future for JoinAll<F> {
+        type Output = ();
+
+        fn poll(&mut self) -> PollState<Self::Output> {
+            for (finished, fut) in self.futures.iter_mut() {
+                if *finished {
+                    continue;
+                }
+
+                match fut.poll() {
+                    PollState::Ready(_) => {
+                        *finished = true;
+                        self.finished_count += 1;
+                    }
+
+                    PollState::NotReady => continue,
+                }
+            }
+
+            if self.finished_count == self.futures.len() {
+                PollState::Ready(())
+            } else {
+                PollState::NotReady
+            }
+        }
+    }
 }
