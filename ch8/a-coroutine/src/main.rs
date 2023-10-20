@@ -1,6 +1,4 @@
 use std::{
-    io::{ErrorKind, Read, Write},
-    mem::MaybeUninit,
     thread,
     time::Duration,
 };
@@ -8,35 +6,14 @@ use std::{
 mod http;
 mod future;
 
-// THOUGHTS
-//
-// Rewrite state machine to be a struct instead (easier to reason about)
-//
-// Implement the first example by hand
-// See if we can create an easy bulld.rs file that rewites very simple
-// examples using our own syntax to a state machine to explain what the
-// compiler does when it reaches async/await
-
 use future::{Future, PollState};
-use mio::Poll;
 
 use crate::http::Http;
 
-// later fn async_main() {
-//     println!("Program starting")
-//     let mut buffer = String::new()
-//     let formatter = Formatter::new(&mut buffer);
-//     let http = Http::new();
-//     let txt = siesta http.get("/1000/HelloWorld");
-//     formatter.format(txt);
-//     let txt2 = siesta http.get("500/HelloWorld2");
-//     formatter.format(txt2);
-//     println!("{}", buffer);
-// }
+
 
 // later fn async_main() {
 //     println!("Program starting")
-
 //     let http = Http::new();
 //     let txt = siesta http.get("/1000/HelloWorld");
 //     println!("{txt}");
@@ -44,30 +21,8 @@ use crate::http::Http;
 //     println!("{txt2}");
 // }
 
-
-struct Formatter<'a> {
-    buffer: &'a mut String,
-}
-
-impl<'a> Formatter<'a> {
-    fn new(buffer: &'a mut String) -> Self {
-        Self { buffer }
-    }
-    fn format(&mut self, txt: String) {
-        *self.buffer += "---------\n";
-        *self.buffer += &txt;
-        *self.buffer += "+++++++++\n";
-    }
-}
-
-
 struct Coroutine {
-    storage: Storage,
     state: State,
-}
-
-struct Storage {
-    
 }
 
 enum State {
@@ -80,7 +35,6 @@ enum State {
 impl Coroutine {
     fn new() -> Self {
         Self {
-            storage: Storage {},
             state: State::Start,
         }
     }
