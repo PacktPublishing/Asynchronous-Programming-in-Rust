@@ -1,6 +1,6 @@
-use std::io::{Write, ErrorKind, Read};
+use std::io::{ErrorKind, Read, Write};
 
-use crate::{Future, future::PollState};
+use crate::{future::PollState, Future};
 
 fn get_req(path: &str) -> String {
     format!(
@@ -11,11 +11,10 @@ fn get_req(path: &str) -> String {
     )
 }
 
-
 pub struct Http;
 
 impl Http {
-    pub fn get(path: &'static str) -> impl Future<Output = String> {
+    pub fn get(path: &str) -> impl Future<Output = String> {
         HttpGetFuture::new(path)
     }
 
@@ -32,15 +31,15 @@ impl Http {
 struct HttpGetFuture {
     stream: Option<mio::net::TcpStream>,
     buffer: Vec<u8>,
-    path: &'static str,
+    path: String,
 }
 
 impl HttpGetFuture {
-    fn new(path: &'static str) -> Self {
+    fn new(path: &str) -> Self {
         Self {
             stream: None,
             buffer: vec![],
-            path,
+            path: path.to_string(),
         }
     }
 
@@ -48,10 +47,9 @@ impl HttpGetFuture {
         let stream = std::net::TcpStream::connect("127.0.0.1:8080").unwrap();
         stream.set_nonblocking(true).unwrap();
         let mut stream = mio::net::TcpStream::from_std(stream);
-        stream.write_all(get_req(self.path).as_bytes()).unwrap();
+        stream.write_all(get_req(&self.path).as_bytes()).unwrap();
         self.stream = Some(stream);
     }
-    
 }
 
 impl Future for HttpGetFuture {
