@@ -57,7 +57,7 @@ to rewrite the example files like this:
 
 ```
 
-cargo run -- --[path-to-file] [optional-out-path]
+cargo run -- [path-to-file] [optional-out-path]
 ```
 
 ## Detailed explanation

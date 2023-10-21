@@ -1,5 +1,6 @@
-use crate::future::{Future, PollState};
-use std::io::{ErrorKind, Read, Write};
+use std::io::{Write, ErrorKind, Read};
+
+use crate::{Future, future::PollState};
 
 fn get_req(path: &str) -> String {
     format!(
@@ -10,11 +11,21 @@ fn get_req(path: &str) -> String {
     )
 }
 
+
 pub struct Http;
 
 impl Http {
     pub fn get(path: &'static str) -> impl Future<Output = String> {
         HttpGetFuture::new(path)
+    }
+
+    fn get_req(path: &str) -> String {
+        format!(
+            "GET {path} HTTP/1.1\r\n\
+             Host: localhost\r\n\
+             Connection: close\r\n\
+             \r\n"
+        )
     }
 }
 
@@ -40,6 +51,7 @@ impl HttpGetFuture {
         stream.write_all(get_req(self.path).as_bytes()).unwrap();
         self.stream = Some(stream);
     }
+    
 }
 
 impl Future for HttpGetFuture {

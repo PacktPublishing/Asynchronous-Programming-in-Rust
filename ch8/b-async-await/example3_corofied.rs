@@ -36,7 +36,7 @@ fn main() {
 // =================================
 // We rewrite this:
 // =================================
-
+    
 // coro fn read_request(i: usize) {
 //     let path = format!("/{}/HelloWorld{i}", i * 1000);
 //     let txt = Http::get(&path).wait;
@@ -51,7 +51,7 @@ fn main() {
 fn read_request(i: usize) -> impl Future<Output=()> {
     Coroutine0::new(i)
 }
-
+        
 enum State0 {
     Start(usize),
     Wait1(Box<dyn Future<Output = String>>),
@@ -107,15 +107,15 @@ impl Future for Coroutine0 {
 // =================================
 // We rewrite this:
 // =================================
-
+    
 // coro fn async_main() {
 //     println!("Program starting");
 //     let mut futures = vec![];
-//
+// 
 //     for i in 0..5 {
 //         futures.push(read_request(i));
 //     }
-//
+// 
 //     future::join_all(futures).wait;
 
 // }
@@ -127,7 +127,7 @@ impl Future for Coroutine0 {
 fn async_main() -> impl Future<Output=()> {
     Coroutine1::new()
 }
-
+        
 enum State1 {
     Start,
     Wait1(Box<dyn Future<Output = String>>),
@@ -170,7 +170,7 @@ impl Future for Coroutine1 {
                 match f1.poll() {
                     PollState::Ready(_) => {
                         // ---- Code you actually wrote ----
-
+                    
                         // ---------------------------------
                         self.state = State1::Resolved;
                         PollState::Ready(())

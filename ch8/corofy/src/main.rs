@@ -1,4 +1,4 @@
-use std::{fs, env, error::Error, path::{Path, PathBuf}, ffi::{OsStr, OsString}};
+use std::{fs, env, error::Error, path::{Path, PathBuf}};
 
 use corofy::rewrite;
 
@@ -20,10 +20,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         None => {
             let src_n = src.file_stem().map(|x|x.to_string_lossy()).unwrap_or_default();
             let src_ext = src.extension().map(|x|x.to_string_lossy()).unwrap_or_default();
-            let clone = format!("{src_n}_corofied{src_ext}");
+            let clone = format!("{src_n}_corofied.{src_ext}");
+
             match src.parent() {
                 Some(path) => path.join(&clone).clone(),
-                None => PathBuf::from(&clone),
+                None => PathBuf::from("./").join(&clone),
             }
         },
     };
@@ -32,7 +33,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Will truncate if exists
     let dest = fs::File::create(dest)?;
 
-    rewrite(src, dest);
+    if let Err(e) = rewrite(src, dest) {
+        println!("{e}");
+    }
     Ok(())
 }
 

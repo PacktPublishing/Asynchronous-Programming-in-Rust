@@ -5,6 +5,7 @@ use std::{
 
 mod http;
 mod future;
+mod runtime;
 
 use future::{Future, PollState};
 

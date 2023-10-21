@@ -1,19 +1,19 @@
 use std::error::Error;
-use std::fmt::Write as WriteFmt;
-use std::fs::{self, File};
+use std::fmt::{Write as WriteFmt, Display};
+use std::fs::File;
 use std::io::Write;
 
 const FN_KW: &str = "coro";
 const W_KW: &str = "wait";
 
-pub fn rewrite(src: String, dest: File) {
+pub fn rewrite(src: String, dest: File) -> Result<(), impl Display> {
     let mut dest = dest;
     // Find the start point of async blocks
     let start_points = find_kw_start_points(&src);
 
     // No keywords, no async functions, do nothing
     if start_points.is_empty() {
-        return;
+        return Err(format!("No `{FN_KW}` function found."));
     }
 
     let mut async_start_end = vec![];
@@ -68,6 +68,8 @@ pub fn rewrite(src: String, dest: File) {
         // Write the coroutine implementation to file
         dest.write_all(transformed.as_bytes()).unwrap();
     }
+
+    Ok(())
 }
 
 fn find_kw_start_points(s: &str) -> Vec<usize> {
@@ -162,15 +164,21 @@ fn create_new_async_fn(func: &str, coro_id: &str) -> (Vec<(String, String)>, Str
         "()".to_string()
     } else {
         let (_, t) = res_type.split_once("->").expect("Expected `->`");
+        // take everything between `->` and `{`
+        let (t, _) = t.split_once("{").expect("Expected `{`");
         t.trim().to_string()
     };
 
     let args_fmt = format_args_name_and_types(&args);
-    let arg_names = format_args_names_only(&args);
+    let arg_names = if args.is_empty() {
+        format!("()")
+    } else {
+        format_args_names_only(&args)
+    };
 
     let new_async_fn = format!(
         "{fn_name}({args_fmt}) -> impl Future<Output={res_type}> {{
-    Coroutine{coro_id}::new({arg_names})
+    Coroutine{coro_id}::new{arg_names}
 }}
         "
     );
@@ -401,7 +409,7 @@ fn format_args_types_only(args: &[(String, String)]) -> String {
 }
 
 /// Gets:
-/// `&[(txt, String), (i: usize)]`
+/// `&[(txt, String), (i, usize)]`
 /// Outputs
 /// `txt: String, i: usize`
 /// If there are no args it returns: ""

@@ -21,11 +21,11 @@ use crate::http::Http;
 //     future::join_all(futures).chill
 // }
 
-dude fn async_main() {
+coro fn async_main() {
     println!("Program starting");
-    let txt = Http::get("/1000/HelloWorld").chill;
+    let txt = Http::get("/1000/HelloWorld").wait;
     println!("{txt}");
-    let txt2 = Http::get("/500/HelloWorld2").chill;
+    let txt2 = Http::get("/500/HelloWorld2").wait;
     println!("{txt2}");
 }
 
@@ -48,13 +48,13 @@ fn main() {
 
 
 
-dude read_request(i: usize) {
+coro read_request(i: usize) {
     let path = format!("/{}/HelloWorld{i}", i * 1000);
-    let txt = Http::get(&path).chill;
+    let txt = Http::get(&path).wait;
     println!("{txt}");
 }
 
-dude fn async_main() {
+coro fn async_main() {
     println!("Program starting");
     let mut futures = vec![];
 
@@ -62,7 +62,7 @@ dude fn async_main() {
         futures.push(read_request(i));
     }
 
-    let txt = future::join_all(futures).chill;
+    let txt = future::join_all(futures).wait;
     println!("{txt}");
 }
 
