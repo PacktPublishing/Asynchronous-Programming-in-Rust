@@ -1,10 +1,71 @@
-// REWRITE
-use std::{
-    thread,
-    time::Duration,
-};
+# Corofy
 
+This tool aims to explain a few things about corotines, and
+by extension, async/await in Rust.
 
+The tool will take an input file like provided below and re-write
+the coroutine-syntax to state machines, which is very similar to
+what happens when you use the async/await syntax in Rust.
+
+This way we can create examples easier and change them around and
+see what happens to the generated code.
+
+The tool will not remove anything from the file, but it will comment out
+the functions marked with `coro`, and re-arrange the transformation of them so
+that they're placed last in the file.
+
+The output will both contain the original `coro` function (commented out), and
+comments explaining where the different parts of the original code is in the
+state machine.
+
+## Note
+
+This tool is very brittle. I can only guarantee it will correctly re-write the exact
+examples we go through in the book and in this repository. To name a few things it won't
+support:
+
+- Leaf coroutines (the ones created by Http::get) that returns anything else than `Future<Output=String>` (however, it should be possible with relatively minor effort to rewrite it to at least return `Future<Output=Vec<u8>>` to give it slightly more flexibility. Have a go if you want to!)
+- Non-leaf corotines that return anything else than `Future<Output=()>`
+- Borrowing across wait points of any kind
+- any variable or function names containing the word "coro" will cause the program to fail, it must only be used in front of the specific functions that you want to re-write (however, writing the word `coro` in a comment should be fine :))
+- and much, much more
+
+Using procedual macros would be a preferred way to solve this. You can take a look at [https://github.com/alexcrichton/futures-await](https://github.com/alexcrichton/futures-await) if you want to see an example of that for Rust async/await.
+
+## Usage
+
+```
+corofy [src_path] [optional-dest-path]
+```
+
+If no destination path is provided, it will default to writing to the same
+directory where the src file is located and adding the postfix "_corofied" to the
+file name.
+
+## Installation
+
+You can install locally on your computer to run the examples via the command line by
+entering the crate folder and writing:
+
+```
+
+cargo install ./
+```
+
+You can avoid installing the project by using a more contrived syntax when using the tool
+to rewrite the example files like this:
+
+```
+
+cargo run -- --[path-to-file] [optional-out-path]
+```
+
+## Detailed explanation
+
+When installed you can give it a file using normal Rust code and our
+own coro/wait syntax. The code below:
+
+```rust
 
 mod http;
 mod future;
@@ -12,15 +73,61 @@ mod future;
 use future::*;
 use crate::http::Http;
 
-// Make this compile correctly!
+coro fn read_request(i: usize) {
+    let path = format!("/{}/HelloWorld{i}", i * 1000);
+    let txt = Http::get(&path).wait;
+    println!("{txt}");
+}
 
-// dude fn async_main() {
-//     println!("Program starting");
-//     let txt = Http::get("/1000/HelloWorld").chill;
-//     println!("{txt}");
-//     let txt2 = Http::get("/500/HelloWorld2").chill;
-//     println!("{txt2}");
-// }
+coro fn async_main() {
+    println!("Program starting");
+    let mut futures = vec![];
+
+    for i in 0..5 {
+        futures.push(read_request(i));
+    }
+
+    let txt = future::join_all(futures).wait;
+    println!("{txt}");
+}
+
+
+
+fn main() {
+    let mut future = async_main();
+
+    loop {
+        match future.poll() {
+            PollState::NotReady => {
+                println!("NotReady");
+                // call executor sleep
+                thread::sleep(Duration::from_millis(200));
+            }
+
+            PollState::Ready(_) => break,
+        }
+    }
+}
+```
+
+...will be re-arrange and re-writen to this:
+
+```rust
+use std::{
+    thread,
+    time::Duration,
+};
+
+mod http;
+mod future;
+
+use future::*;
+use crate::http::Http;
+
+
+
+
+
 
 
 fn main() {
@@ -39,14 +146,13 @@ fn main() {
     }
 }
 
-
 // =================================
 // We rewrite this:
 // =================================
 
-// dude fn read_request(i: usize) {
+// coro fn read_request(i: usize) {
 //     let path = format!("/{}/HelloWorld{i}", i * 1000);
-//     let txt = Http::get(&path).chill;
+//     let txt = Http::get(&path).wait;
 //     println!("{txt}");
 
 // }
@@ -115,7 +221,7 @@ impl Future for Coroutine0 {
 // We rewrite this:
 // =================================
 
-// dude fn async_main() {
+// coro fn async_main() {
 //     println!("Program starting");
 //     let mut futures = vec![];
 //
@@ -123,7 +229,7 @@ impl Future for Coroutine0 {
 //         futures.push(read_request(i));
 //     }
 //
-//     let txt = future::join_all(futures).chill;
+//     let txt = future::join_all(futures).wait;
 //     println!("{txt}");
 
 // }
@@ -192,3 +298,4 @@ impl Future for Coroutine1 {
         }
     }
 }
+```

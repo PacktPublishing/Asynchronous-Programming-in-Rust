@@ -8,12 +8,12 @@ fn main() -> Result<()> {
     let (evt_sender, evt_receiver) = channel();
     let reactor = Reactor::new(evt_sender);
     let mut executor = Excutor::new(evt_receiver);
-    
+
 
     let stream = std::net::TcpStream::connect("flash.siwalik.in:80")?;
     stream.set_nonblocking(true);
     let mut stream = TcpStream::from_std(stream);
-    
+
     let request = b"GET /delay/1000/url/http://www.google.com HTTP/1.1\r\nHost: flash.siwalik.in\r\nConnection: close\r\n\r\n";
     stream.write_all(request).expect("Stream write err.");
     reactor.register_stream_read_interest(&mut stream, Token(TEST_TOKEN));

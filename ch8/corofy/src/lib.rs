@@ -1,24 +1,15 @@
 use std::error::Error;
 use std::fmt::Write as WriteFmt;
-use std::fs;
+use std::fs::{self, File};
 use std::io::Write;
 
-const FN_KW: &str = "dude";
-const W_KW: &str = "chill";
+const FN_KW: &str = "coro";
+const W_KW: &str = "wait";
 
-fn main() {
-    let mainrs = fs::read_to_string("./main.rs").unwrap();
-    // Truncate main.rs and rewrite what's there, we'll rewrite it
-    let mut new = fs::File::create("./hello.rs").unwrap();
-
-    if !mainrs.starts_with("// REWRITE") {
-        return;
-    }
-    // remove rewrite line in the start
-    let mainrs: String = mainrs.lines().skip(1).map(|l| format!("{l}\n")).collect();
-
+pub fn rewrite(src: String, dest: File) {
+    let mut dest = dest;
     // Find the start point of async blocks
-    let start_points = find_kw_start_points(&mainrs);
+    let start_points = find_kw_start_points(&src);
 
     // No keywords, no async functions, do nothing
     if start_points.is_empty() {
@@ -33,7 +24,7 @@ fn main() {
         let mut brackets_counter = 0;
         let mut end = start;
 
-        for char in mainrs[start..].chars() {
+        for char in src[start..].chars() {
             end += 1;
             match char {
                 '{' => brackets_counter += 1,
@@ -57,25 +48,25 @@ fn main() {
 
     let mut pos_tracker = 0;
     for (start, end) in &async_start_end {
-        new.write_all(&mainrs[pos_tracker..*start].as_bytes())
+        dest.write_all(&src[pos_tracker..*start].as_bytes())
             .unwrap();
         pos_tracker = *end;
     }
     // Write everything after the last async fn
-    new.write_all(&mainrs[pos_tracker..].as_bytes()).unwrap();
+    dest.write_all(&src[pos_tracker..].as_bytes()).unwrap();
 
     // transform the async functions and write them to the file
 
     for (i, (start, end)) in async_start_end.into_iter().enumerate() {
         let id = i.to_string();
 
-        let async_fn = String::from(&mainrs[start..end - 1]);
+        let async_fn = String::from(&src[start..end - 1]);
 
         // transfrom the async fn
         let transformed = transform(&async_fn, &id);
 
         // Write the coroutine implementation to file
-        new.write_all(transformed.as_bytes()).unwrap();
+        dest.write_all(transformed.as_bytes()).unwrap();
     }
 }
 
