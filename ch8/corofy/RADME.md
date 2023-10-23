@@ -49,7 +49,7 @@ entering the crate folder and writing:
 
 ```
 
-cargo install ./
+cargo install --path .
 ```
 
 You can avoid installing the project by using a more contrived syntax when using the tool
