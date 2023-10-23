@@ -26,7 +26,6 @@ fn main() {
     println!("\nELAPSED TIME: {}", start.elapsed().as_secs_f32());
 }
 
-
 // =================================
 // We rewrite this:
 // =================================
@@ -50,7 +49,7 @@ fn main() {
 // Into this:
 // =================================
 
-fn async_main() -> impl Future<Output=()> {
+fn async_main() -> impl Future<Output=String> {
     Coroutine0::new()
 }
 
@@ -76,9 +75,9 @@ impl Coroutine0 {
 
 
 impl Future for Coroutine0 {
-    type Output = ();
+    type Output = String;
 
-    fn poll(&mut self) -> PollState<()> {
+    fn poll(&mut self) -> PollState<Self::Output> {
         match self.state {
             State0::Start => {
                 // ---- Code you actually wrote ----
@@ -158,7 +157,7 @@ impl Future for Coroutine0 {
 
                         // ---------------------------------
                         self.state = State0::Resolved;
-                        PollState::Ready(())
+                        PollState::Ready(String::new())
                     }
                     PollState::NotReady => PollState::NotReady,
                 }

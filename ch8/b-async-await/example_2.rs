@@ -6,21 +6,25 @@ mod future;
 use future::*;
 use crate::http::Http;
 
+fn get_path(i: usize) -> String {
+    format!("/{}/HelloWorld{i}", i * 1000)
+}
+
 coro fn read_request(i: usize) {
-    let path = format!("/{}/HelloWorld{i}", i * 1000);
-    let txt = Http::get(&path).wait;
+    let txt = Http::get(&get_path(i)).wait;
     println!("{txt}");
 }
 
+
 coro fn async_main() {
     println!("Program starting");
-    let mut futures = vec![];
 
+    let mut futures = vec![];
     for i in 0..5 {
         futures.push(read_request(i));
     }
 
-    future::join_all(futures).wait;
+    futures.pop().unwrap().wait;
 }
 
 
@@ -34,6 +38,5 @@ fn main() {
             PollState::Ready(_) => break,
         }
     }
-
     println!("\nELAPSED TIME: {}", start.elapsed().as_secs_f32());
 }

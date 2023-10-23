@@ -1,5 +1,5 @@
 [package]
-name = "b-reactor-executor"
+name = "b-async-await"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 mio = { version = "0.8.8", features = ["net", "os-poll"] }
-once_cell = "1.18.0"

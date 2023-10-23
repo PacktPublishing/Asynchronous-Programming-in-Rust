@@ -1,15 +1,10 @@
 use std::time::Instant;
 
-mod http;
 mod future;
+mod http;
 
-use future::*;
 use crate::http::Http;
-
-
-
-
-
+use future::*;
 
 fn main() {
     let start = Instant::now();
@@ -24,7 +19,6 @@ fn main() {
 
     println!("\nELAPSED TIME: {}", start.elapsed().as_secs_f32());
 }
-
 
 // =================================
 // We rewrite this:
@@ -41,7 +35,7 @@ fn main() {
 // Into this:
 // =================================
 
-fn read_request(i: usize) -> impl Future<Output=()> {
+fn read_request(i: usize) -> impl Future<Output = String> {
     Coroutine0::new(i)
 }
 
@@ -57,22 +51,23 @@ struct Coroutine0 {
 
 impl Coroutine0 {
     fn new(i: usize) -> Self {
-        Self { state: State0::Start(i) }
+        Self {
+            state: State0::Start(i),
+        }
     }
 }
 
-
 impl Future for Coroutine0 {
-    type Output = ();
+    type Output = String;
 
-    fn poll(&mut self) -> PollState<()> {
+    fn poll(&mut self) -> PollState<Self::Output> {
         match self.state {
             State0::Start(i) => {
                 // ---- Code you actually wrote ----
                 let path = format!("/{}/HelloWorld{i}", i * 1000);
 
                 // ---------------------------------
-                let fut1 = Box::new( Http::get(&path));
+                let fut1 = Box::new(Http::get(&path));
                 self.state = State0::Wait1(fut1);
                 PollState::NotReady
             }
@@ -85,17 +80,16 @@ impl Future for Coroutine0 {
 
                         // ---------------------------------
                         self.state = State0::Resolved;
-                        PollState::Ready(())
+                        PollState::Ready(String::new())
                     }
                     PollState::NotReady => PollState::NotReady,
                 }
             }
 
-            State0::Resolved => panic!("Polled a resolved future")
+            State0::Resolved => panic!("Polled a resolved future"),
         }
     }
 }
-
 
 // =================================
 // We rewrite this:
@@ -117,7 +111,7 @@ impl Future for Coroutine0 {
 // Into this:
 // =================================
 
-fn async_main() -> impl Future<Output=()> {
+fn async_main() -> impl Future<Output = String> {
     Coroutine1::new()
 }
 
@@ -133,25 +127,25 @@ struct Coroutine1 {
 
 impl Coroutine1 {
     fn new() -> Self {
-        Self { state: State1::Start }
+        Self {
+            state: State1::Start,
+        }
     }
 }
 
-
 impl Future for Coroutine1 {
-    type Output = ();
+    type Output = String;
 
-    fn poll(&mut self) -> PollState<()> {
+    fn poll(&mut self) -> PollState<Self::Output> {
         match self.state {
             State1::Start => {
                 // ---- Code you actually wrote ----
                 println!("Program starting");
-    let mut futures = vec![];
+                let mut futures = vec![];
 
-    for i in 0..5 {
-        futures.push(read_request(i));
-    }
-
+                for i in 0..5 {
+                    futures.push(read_request(i));
+                }
 
                 // ---------------------------------
                 let fut1 = Box::new(future::join_all(futures));
@@ -166,13 +160,13 @@ impl Future for Coroutine1 {
 
                         // ---------------------------------
                         self.state = State1::Resolved;
-                        PollState::Ready(())
+                        PollState::Ready(String::new())
                     }
                     PollState::NotReady => PollState::NotReady,
                 }
             }
 
-            State1::Resolved => panic!("Polled a resolved future")
+            State1::Resolved => panic!("Polled a resolved future"),
         }
     }
 }

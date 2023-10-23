@@ -157,18 +157,6 @@ fn create_new_async_fn(func: &str, coro_id: &str) -> (Vec<(String, String)>, Str
 
     let args = get_args(&args);
 
-    let (_, res_type) = def.split_once(")").expect("Expected `)`");
-    // clean up res_type to somethig we can use and check if there is one defined at all
-
-    let res_type = if res_type.trim().eq("{") {
-        "()".to_string()
-    } else {
-        let (_, t) = res_type.split_once("->").expect("Expected `->`");
-        // take everything between `->` and `{`
-        let (t, _) = t.split_once("{").expect("Expected `{`");
-        t.trim().to_string()
-    };
-
     let args_fmt = format_args_name_and_types(&args);
     let arg_names = if args.is_empty() {
         format!("()")
@@ -177,7 +165,7 @@ fn create_new_async_fn(func: &str, coro_id: &str) -> (Vec<(String, String)>, Str
     };
 
     let new_async_fn = format!(
-        "{fn_name}({args_fmt}) -> impl Future<Output={res_type}> {{
+        "{fn_name}({args_fmt}) -> impl Future<Output=String> {{
     Coroutine{coro_id}::new{arg_names}
 }}
         "
@@ -281,12 +269,14 @@ impl Coroutine{id} {{
     );
 
     // This is our future implementation
+    // NB! Notice how we force all futures to return a string even if they
+    // don't (if not we this get's very complicated without type information available)
     let mut imp = format!(
         "
 impl Future for Coroutine{id} {{
-    type Output = ();
+    type Output = String;
 
-    fn poll(&mut self) -> PollState<()> {{"
+    fn poll(&mut self) -> PollState<Self::Output> {{"
     );
 
     for (i, step) in steps.iter().enumerate() {
@@ -352,7 +342,7 @@ impl Future for Coroutine{id} {{
                     {step}
                         // ---------------------------------
                         self.state = State{id}::Resolved;
-                        PollState::Ready(())
+                        PollState::Ready(String::new())
                     }}
                     PollState::NotReady => PollState::NotReady,
                 }}

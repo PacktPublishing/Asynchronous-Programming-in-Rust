@@ -28,6 +28,7 @@ support:
 - Non-leaf corotines that return anything else than `Future<Output=()>`
 - Borrowing across wait points of any kind
 - any variable or function names containing the word "coro" will cause the program to fail, it must only be used in front of the specific functions that you want to re-write (however, writing the word `coro` in a comment should be fine :))
+- Oh, and all futures have an Output type of `String` even if they don't return anything. This simplifies the code a bit, and without access to type information outside of the file we're parsing, we can't really rely on getting the types correctly anyway.
 - and much, much more
 
 Using procedual macros would be a preferred way to solve this. You can take a look at [https://github.com/alexcrichton/futures-await](https://github.com/alexcrichton/futures-await) if you want to see an example of that for Rust async/await.
@@ -299,3 +300,13 @@ impl Future for Coroutine1 {
     }
 }
 ```
+
+## Final note
+
+The whole program bear clear signs that I originally thought this would only
+be a few lines of code to support the very limited cases we cover in these
+examples. Apparently, that's not the case but it's not any goal for me to
+improve this beyond proving the points I try to make in the book.
+
+If you ever want to implement a more robust solution, using procedural macros is
+the way to go.
