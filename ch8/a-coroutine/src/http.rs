@@ -69,7 +69,9 @@ impl Future for HttpGetFuture {
                 Err(e) if e.kind() == ErrorKind::WouldBlock => {
                     break PollState::NotReady;
                 }
-
+                Err(e) if e.kind() == ErrorKind::Interrupted => {
+                    continue;
+                }
                 Err(e) => panic!("{e:?}"),
             }
         }

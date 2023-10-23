@@ -1,7 +1,7 @@
-
 use std::{
     thread,
     time::Duration,
+    time::Instant,
 };
 
 mod http;
@@ -15,22 +15,23 @@ use crate::http::Http;
 
 
 
-
 fn main() {
+    let start = Instant::now();
     let mut future = async_main();
 
     loop {
         match future.poll() {
             PollState::NotReady => {
-                println!("NotReady");
-                // call executor sleep
                 thread::sleep(Duration::from_millis(200));
             }
 
             PollState::Ready(_) => break,
         }
     }
+
+    println!("\nELAPSED TIME: {}", start.elapsed().as_secs_f32());
 }
+
 
 // =================================
 // We rewrite this:
@@ -48,7 +49,7 @@ fn main() {
 // =================================
 
 fn read_request(i: usize) -> impl Future<Output=()> {
-    Coroutine0::new((i))
+    Coroutine0::new(i)
 }
 
 enum State0 {
@@ -115,8 +116,7 @@ impl Future for Coroutine0 {
 //         futures.push(read_request(i));
 //     }
 //
-//     let txt = future::join_all(futures).wait;
-//     println!("{txt}");
+//     future::join_all(futures).wait;
 
 // }
 
@@ -161,16 +161,15 @@ impl Future for Coroutine1 {
 
 
                 // ---------------------------------
-                let fut1 = Box::new( future::join_all(futures));
+                let fut1 = Box::new(future::join_all(futures));
                 self.state = State1::Wait1(fut1);
                 PollState::NotReady
             }
 
             State1::Wait1(ref mut f1) => {
                 match f1.poll() {
-                    PollState::Ready(txt) => {
+                    PollState::Ready(_) => {
                         // ---- Code you actually wrote ----
-                        println!("{txt}");
 
                         // ---------------------------------
                         self.state = State1::Resolved;

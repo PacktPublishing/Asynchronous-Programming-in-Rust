@@ -1,7 +1,4 @@
-use std::{
-    thread,
-    time::Duration,
-};
+use std::time::Instant;
 
 mod http;
 mod future;
@@ -34,10 +31,7 @@ fn main() {
 
     loop {
         match future.poll() {
-            PollState::NotReady => {
-                thread::sleep(Duration::from_millis(200));
-            }
-
+            PollState::NotReady => (),
             PollState::Ready(_) => break,
         }
     }

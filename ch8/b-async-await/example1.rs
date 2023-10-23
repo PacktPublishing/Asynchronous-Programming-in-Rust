@@ -25,7 +25,6 @@ fn main() {
         match future.poll() {
             PollState::NotReady => {
                 println!("NotReady");
-                // call executor sleep
                 thread::sleep(Duration::from_millis(200));
             }
 
