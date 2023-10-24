@@ -58,12 +58,13 @@ fn main() {
     loop {
         match future.poll() {
             PollState::NotReady => {
-                println!("NotReady");
-                thread::sleep(Duration::from_millis(200));
+                println!("Schedule other tasks");
             }
-
             PollState::Ready(_) => break,
         }
+
+        // Since we print every poll, slow down the loop
+        thread::sleep(Duration::from_millis(100));
     }
 }
 ```

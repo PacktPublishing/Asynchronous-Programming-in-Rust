@@ -6,7 +6,7 @@ mod future;
 use future::*;
 use crate::http::Http;
 
-coro fn read_request(i: usize) {
+coro fn request(i: usize) {
     let path = format!("/{}/HelloWorld{i}", i * 1000);
     let txt = Http::get(&path).wait;
     println!("{txt}");
@@ -17,7 +17,7 @@ coro fn async_main() {
     let mut futures = vec![];
 
     for i in 0..5 {
-        futures.push(read_request(i));
+        futures.push(request(i));
     }
 
     future::join_all(futures).wait;

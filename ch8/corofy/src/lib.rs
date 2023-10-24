@@ -276,7 +276,8 @@ impl Coroutine{id} {{
 impl Future for Coroutine{id} {{
     type Output = String;
 
-    fn poll(&mut self) -> PollState<Self::Output> {{"
+    fn poll(&mut self) -> PollState<Self::Output> {{
+        loop {{"
     );
 
     for (i, step) in steps.iter().enumerate() {
@@ -295,14 +296,13 @@ impl Future for Coroutine{id} {{
                 &mut imp,
                 "
         match self.state {{
-            State{id}::Start{impl_fut_first_args} => {{
-                // ---- Code you actually wrote ----
-            {step}
-                // ---------------------------------
-                let fut{next} = Box::new({futname});
-                self.state = State{id}::Wait{next}(fut{next});
-                PollState::NotReady
-            }}
+                State{id}::Start{impl_fut_first_args} => {{
+                    // ---- Code you actually wrote ----
+                {step}
+                    // ---------------------------------
+                    let fut{next} = Box::new({futname});
+                    self.state = State{id}::Wait{next}(fut{next});
+                }}
 "
             )?;
 
@@ -313,19 +313,18 @@ impl Future for Coroutine{id} {{
             write!(
                 &mut imp,
                 "
-            State{id}::Wait{i}(ref mut f{i}) => {{
-                match f{i}.poll() {{
-                    PollState::Ready({varname}) => {{
-                        // ---- Code you actually wrote ----
-                    {step}
-                        // ---------------------------------
-                        let fut{next} = Box::new({fut});
-                        self.state = State{id}::Wait{next}(fut{next});
-                        PollState::NotReady
+                State{id}::Wait{i}(ref mut f{i}) => {{
+                    match f{i}.poll() {{
+                        PollState::Ready({varname}) => {{
+                            // ---- Code you actually wrote ----
+                        {step}
+                            // ---------------------------------
+                            let fut{next} = Box::new({fut});
+                            self.state = State{id}::Wait{next}(fut{next});
+                        }}
+                        PollState::NotReady => break PollState::NotReady,
                     }}
-                    PollState::NotReady => PollState::NotReady,
                 }}
-            }}
 "
             )?;
 
@@ -335,18 +334,18 @@ impl Future for Coroutine{id} {{
             write!(
                 &mut imp,
                 "
-            State{id}::Wait{i}(ref mut f{i}) => {{
-                match f{i}.poll() {{
-                    PollState::Ready({varname}) => {{
-                        // ---- Code you actually wrote ----
-                    {step}
-                        // ---------------------------------
-                        self.state = State{id}::Resolved;
-                        PollState::Ready(String::new())
+                State{id}::Wait{i}(ref mut f{i}) => {{
+                    match f{i}.poll() {{
+                        PollState::Ready({varname}) => {{
+                            // ---- Code you actually wrote ----
+                        {step}
+                            // ---------------------------------
+                            self.state = State{id}::Resolved;
+                            break PollState::Ready(String::new());
+                        }}
+                        PollState::NotReady => break PollState::NotReady,
                     }}
-                    PollState::NotReady => PollState::NotReady,
                 }}
-            }}
 "
             )?;
         }
@@ -355,8 +354,9 @@ impl Future for Coroutine{id} {{
     // If we poll the future after it has resolved, we panic
     writeln!(
         &mut imp,
-        "
-            State{id}::Resolved => panic!(\"Polled a resolved future\")
+            "
+                State{id}::Resolved => panic!(\"Polled a resolved future\")
+            }}
         }}
     }}
 }}"
