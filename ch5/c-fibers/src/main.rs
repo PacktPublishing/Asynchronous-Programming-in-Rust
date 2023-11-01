@@ -153,6 +153,7 @@ pub fn yield_thread() {
 
 #[naked]
 #[no_mangle]
+#[cfg_attr(target_os = "macos", export_name = "\x01switch")]
 unsafe extern "C" fn switch() {
     asm!(
         "mov [rdi + 0x00], rsp",
