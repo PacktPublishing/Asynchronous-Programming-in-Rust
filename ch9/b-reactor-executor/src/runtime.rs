@@ -1,42 +1,63 @@
-use mio::{Events, Poll, Registry};
+use crate::future::Future;
+use std::cell::RefCell;
+use std::collections::VecDeque;
+use std::sync::{Arc, Mutex, OnceLock};
 
-use crate::future::{Future, PollState};
-use std::sync::OnceLock;
-
-static REGISTRY: OnceLock<Registry> = OnceLock::new();
-
-pub fn registry() -> &'static Registry {
-    REGISTRY.get().expect("Called outside an executor context")
+thread_local! {
+    static TASKS: RefCell<VecDeque<Arc<Task>>> = RefCell::new(VecDeque::new());
+    static CURR_ID: RefCell<usize> = RefCell::new(0);
 }
 
-pub struct Runtime {
-    poll: Poll,
+pub fn spawn<F>(f: F)
+where
+    F: Future<Output = String> + 'static,
+{
+    let task = Arc::new(Task::new(f));
+    TASKS.with(|tasks| tasks.borrow_mut().push_back(task));
 }
 
-impl Runtime {
+fn next_id() -> usize {
+    CURR_ID.with(|id| {
+        let mut id = id.borrow_mut();
+        *id += 1;
+        *id
+    })
+}
+
+pub struct Task {
+    future: Arc<dyn Future<Output = String>>,
+    id: usize,
+}
+
+impl Task {
+    pub fn new<F>(future: F) -> Self
+    where
+        F: Future<Output = String> + 'static,
+    {
+        Self {
+            future: Arc::new(future),
+            id: next_id(),
+        }
+    }
+}
+
+pub struct Executor;
+
+impl Executor {
     pub fn new() -> Self {
-        let poll = Poll::new().unwrap();
-        let registry = poll.registry().try_clone().unwrap();
-        REGISTRY.set(registry).unwrap();
-        Self { poll }
+        Self {}
     }
 
-    pub fn block_on<F>(&mut self, future: F)
+    pub fn block_on<F>(&self, future: F)
     where
-        F: Future<Output = ()>,
+        F: Future<Output = String> + 'static,
     {
-        let mut future = future;
-        loop {
-            match future.poll() {
-                PollState::NotReady => {
-                    println!("Schedule other tasks\n");
-                    let mut events = Events::with_capacity(100);
-                    self.poll.poll(&mut events, None).unwrap();
-                }
+        spawn(future);
+        self.run();
+    }
 
-                PollState::Ready(_) => break,
-            }
-        }
+    fn run(&self) {
+        todo!()
     }
 }
 

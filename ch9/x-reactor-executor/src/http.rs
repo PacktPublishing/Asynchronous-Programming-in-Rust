@@ -1,8 +1,6 @@
-use std::io::{ErrorKind, Read, Write};
+use std::io::{Write, ErrorKind, Read};
 
-use mio::{Interest, Token};
-
-use crate::{future::PollState, runtime, Future};
+use crate::{Future, future::PollState};
 
 fn get_req(path: &str) -> String {
     format!(
@@ -12,6 +10,7 @@ fn get_req(path: &str) -> String {
              \r\n"
     )
 }
+
 
 pub struct Http;
 
@@ -52,6 +51,7 @@ impl HttpGetFuture {
         stream.write_all(get_req(self.path).as_bytes()).unwrap();
         self.stream = Some(stream);
     }
+    
 }
 
 impl Future for HttpGetFuture {
@@ -64,12 +64,6 @@ impl Future for HttpGetFuture {
         if self.stream.is_none() {
             println!("FIRST POLL - START OPERATION");
             self.write_request();
-
-            // CHANGED
-            runtime::registry()
-                .register(self.stream.as_mut().unwrap(), Token(0), Interest::READABLE)
-                .unwrap();
-            // ============
             return PollState::NotReady;
         }
 
