@@ -1,24 +1,21 @@
-use std::{
-    thread,
-    time::Duration,
-};
+use std::{thread, time::Duration};
 
-mod http;
 mod future;
+mod http;
 mod runtime;
 
-use future::{Future, PollState};
+use future::{Future, PollState, Waker};
+use runtime::{Executor, Reactor};
 
 use crate::http::Http;
 
-
-
-// coro fn async_main() {
-//     println!("Program starting")
-//     let txt = Http::get("/1000/HelloWorld").wait;
+// This state machine would be similar to the one created by:
+// async fn async_main() {
+//     println!("Program starting");
+//     let txt = http::Http::get("/600/HelloAsyncAwait").await;
 //     println!("{txt}");
-//     let txt2 = Http::("500/HelloWorld2").wait;
-//     println!("{txt2}");
+//     let txt = http::Http::get("/400/HelloAsyncAwait").await;
+//     println!("{txt}");
 // }
 
 struct Coroutine {
@@ -43,62 +40,48 @@ impl Coroutine {
 impl Future for Coroutine {
     type Output = ();
 
-    fn poll(&mut self) -> PollState<Self::Output> {
-        match self.state {
-            State::Start => {
-                println!("Program starting");
-                let fut = Box::new(Http::get("/1000/HelloWorld1"));
-                self.state = State::Wait1(fut);
-                PollState::NotReady
-            }
+    fn poll(&mut self, waker: &Waker) -> PollState<Self::Output> {
+        loop {
+            match self.state {
+                State::Start => {
+                    println!("Program starting");
+                    let fut = Box::new(Http::get("/600/HelloWorld1"));
+                    self.state = State::Wait1(fut);
+                }
 
-            State::Wait1(ref mut fut) => {
-                match fut.poll() {
+                State::Wait1(ref mut fut) => match fut.poll(waker) {
                     PollState::Ready(txt) => {
                         println!("{txt}");
-                        let fut2 = Box::new(Http::get("/600/HelloWorld2"));
+                        let fut2 = Box::new(Http::get("/400/HelloWorld2"));
                         self.state = State::Wait2(fut2);
-                        PollState::NotReady
                     }
 
-                    PollState::NotReady => PollState::NotReady,
-                }
-            }
+                    PollState::NotReady => break PollState::NotReady,
+                },
 
-            State::Wait2(ref mut fut2) => {
-                match fut2.poll() {
+                State::Wait2(ref mut fut2) => match fut2.poll(waker) {
                     PollState::Ready(txt2) => {
                         println!("{txt2}");
                         self.state = State::Resolved;
-                        PollState::Ready(())
+                        break PollState::Ready(());
                     }
 
-                    PollState::NotReady => PollState::NotReady,
-                }
-            }
+                    PollState::NotReady => break PollState::NotReady,
+                },
 
-            State::Resolved => panic!("Polled a resolved future"),
+                State::Resolved => panic!("Polled a resolved future"),
+            }
         }
     }
 }
-
 
 fn async_main() -> impl Future<Output = ()> {
     Coroutine::new()
 }
 
 fn main() {
-    let mut future = async_main();
-
-    loop {
-        match future.poll() {
-            PollState::NotReady => {
-                println!("NotReady");
-                // call executor sleep
-                thread::sleep(Duration::from_millis(200));
-            }
-
-            PollState::Ready(s) => break s,
-        }
-    }
+    let future = async_main();
+    Reactor::start();
+    let executor = Executor::new();
+    executor.block_on(future);
 }

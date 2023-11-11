@@ -1,83 +1,43 @@
-use mio::{net::TcpStream, Events, Interest, Poll, Registry, Token};
+use crate::future::Future;
+use std::cell::RefCell;
+use std::collections::VecDeque;
+use std::sync::{Arc, Mutex, OnceLock};
 
-use crate::future::{Future, PollState, Waker};
-use std::{
-    cell::RefCell,
-    collections::HashMap,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc, Mutex, OnceLock,
-    },
-    thread::{self, Thread},
-};
-
-static REACTOR: OnceLock<Reactor> = OnceLock::new();
-
-pub fn reactor() -> &'static Reactor {
-    REACTOR.get().expect("Called outside an executor context")
+thread_local! {
+    static TASKS: RefCell<VecDeque<Arc<Task>>> = RefCell::new(VecDeque::new());
+    static CURR_ID: RefCell<usize> = RefCell::new(0);
 }
 
-pub struct Reactor {
-    wakers: Arc<Mutex<HashMap<usize, Waker>>>,
-    registry: Registry,
-    next_id: AtomicUsize,
+pub fn spawn<F>(f: F)
+where
+    F: Future<Output = String> + 'static,
+{
+    let task = Arc::new(Task::new(f));
+    TASKS.with(|tasks| tasks.borrow_mut().push_back(task));
 }
 
-impl Reactor {
-    pub fn start() {
-        let wakers = Arc::new(Mutex::new(HashMap::new()));
-        let wakers_clone = wakers.clone();
+fn next_id() -> usize {
+    CURR_ID.with(|id| {
+        let mut id = id.borrow_mut();
+        *id += 1;
+        *id
+    })
+}
 
-        let mut poll = Poll::new().unwrap();
-        let registry = poll.registry().try_clone().unwrap();
-        let next_id = AtomicUsize::new(1);
-        let reactor = Self {
-            wakers,
-            registry,
-            next_id,
-        };
-        REACTOR.set(reactor).ok().unwrap();
+pub struct Task {
+    future: Arc<dyn Future<Output = String>>,
+    id: usize,
+}
 
-        thread::spawn(move || {
-            let mut events = Events::with_capacity(100);
-            loop {
-                poll.poll(&mut events, None).unwrap();
-                for e in events.iter() {
-                    let Token(id) = e.token();
-                    wakers_clone
-                        .lock()
-                        .map(|w| {
-                            // if we removed it from the list we don't want to respond to
-                            // notifications anymore
-                            if let Some(waker) = w.get(&id) {
-                                waker.wake();
-                            }
-                        })
-                        .unwrap();
-                }
-            }
-        });
-    }
-
-    pub fn register(&self, stream: &mut TcpStream, interest: Interest, waker: Waker, id: usize) {
-        let is_new = self
-            .wakers
-            .lock()
-            .map(|mut w| w.insert(id, waker).is_none())
-            .unwrap();
-
-        if is_new {
-            self.registry.register(stream, Token(id), interest).unwrap();
+impl Task {
+    pub fn new<F>(future: F) -> Self
+    where
+        F: Future<Output = String> + 'static,
+    {
+        Self {
+            future: Arc::new(future),
+            id: next_id(),
         }
-    }
-
-    pub fn deregister(&self, stream: &mut TcpStream, id: usize) {
-        self.registry.deregister(stream).unwrap();
-        self.wakers.lock().map(|mut w| w.remove(&id)).unwrap();
-    }
-
-    pub fn next_id(&self) -> usize {
-        self.next_id.fetch_add(1, Ordering::Relaxed)
     }
 }
 
@@ -90,20 +50,14 @@ impl Executor {
 
     pub fn block_on<F>(&self, future: F)
     where
-        F: Future<Output = ()>,
+        F: Future<Output = String> + 'static,
     {
-        let mut future = future;
-        let waker = Waker::new(thread::current());
-        loop {
-            match future.poll(&waker) {
-                PollState::NotReady => {
-                    println!("Schedule other tasks\n");
-                    thread::park();
-                }
+        spawn(future);
+        self.run();
+    }
 
-                PollState::Ready(_) => break,
-            }
-        }
+    fn run(&self) {
+        todo!()
     }
 }
 
