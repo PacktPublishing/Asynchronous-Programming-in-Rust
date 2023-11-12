@@ -1,9 +1,11 @@
+use std::{thread, time::Duration};
 
 mod future;
 mod http;
 mod runtime;
 
 use future::{Future, PollState, Waker};
+use runtime::{Executor, Reactor};
 
 use crate::http::Http;
 
@@ -78,6 +80,8 @@ fn async_main() -> impl Future<Output = ()> {
 }
 
 fn main() {
-    let executor = runtime::init();
-    executor.block_on(async_main());
+    let future = async_main();
+    Reactor::start();
+    let executor = Executor::new();
+    executor.block_on(future);
 }

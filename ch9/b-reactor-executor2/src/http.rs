@@ -79,6 +79,8 @@ impl Future for HttpGetFuture {
             match self.stream.as_mut().unwrap().read(&mut buff) {
                 Ok(0) => {
                     let s = String::from_utf8_lossy(&self.buffer);
+
+                    // CHANGED
                     runtime::reactor().deregister(self.stream.as_mut().unwrap(), self.id);
                     break PollState::Ready(s.to_string());
                 }

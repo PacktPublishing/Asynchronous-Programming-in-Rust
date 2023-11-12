@@ -1,6 +1,5 @@
 // NEW
 use std::thread::Thread;
-use crate::runtime::Waker;
 // END NEW
 
 
@@ -15,7 +14,17 @@ pub enum PollState<T> {
     NotReady,
 }
 // NEW
+#[derive(Clone)]
+pub struct Waker(Thread);
 
+impl Waker {
+    pub fn new(thread: Thread) -> Self {
+        Self(thread)
+    }
+    pub fn wake(&self) {
+        self.0.unpark();
+    }
+}
 // END NEW
 
 pub fn join_all<F: Future>(futures: Vec<F>) -> JoinAll<F> {
@@ -32,7 +41,7 @@ pub fn join_all<F: Future>(futures: Vec<F>) -> JoinAll<F> {
     }
 
     impl<F: Future> Future for JoinAll<F> {
-        type Output = String;
+        type Output = ();
         ////////////////////////// HERE
         fn poll(&mut self, waker: &Waker) -> PollState<Self::Output> {
             for (finished, fut) in self.futures.iter_mut() {
@@ -51,7 +60,7 @@ pub fn join_all<F: Future>(futures: Vec<F>) -> JoinAll<F> {
             }
 
             if self.finished_count == self.futures.len() {
-                PollState::Ready(String::new())
+                PollState::Ready(())
             } else {
                 PollState::NotReady
             }
