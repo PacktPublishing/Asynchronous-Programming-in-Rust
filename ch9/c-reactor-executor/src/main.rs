@@ -27,7 +27,7 @@ fn main() {
 // Into this:
 // =================================
 
-fn request(i: usize) -> impl Future<Output = String> + Semd {
+fn request(i: usize) -> impl Future<Output = String> {
     Coroutine0::new(i)
 }
 
@@ -137,6 +137,7 @@ impl Future for Coroutine1 {
 
                     // ---------------------------------
                     self.state = State1::Resolved;
+                    break PollState::Ready(String::new());
                 }
 
                 State1::Resolved => panic!("Polled a resolved future"),

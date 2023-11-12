@@ -9,7 +9,7 @@ use std::{
 
 use mio::{net::TcpStream, Events, Interest, Poll, Registry, Token};
 
-use super::Waker;
+use crate::runtime::Waker;
 
 static REACTOR: OnceLock<Reactor> = OnceLock::new();
 
@@ -25,12 +25,19 @@ pub struct Reactor {
 }
 
 impl Reactor {
-    pub fn register(&self, stream: &mut TcpStream, interest: Interest, waker: Waker, id: usize) {
+    pub fn register(
+        &self,
+        stream: &mut TcpStream,
+        interest: Interest,
+        waker: Waker,
+        id: usize,
+    )
+    {
         let is_new = self
             .wakers
             .lock()
             // Must always store the most recent waker
-            .map(|mut w| w.insert(id, waker).is_none())
+            .map(|mut w| w.insert(id, waker.clone()).is_none())
             .unwrap();
 
         if is_new {

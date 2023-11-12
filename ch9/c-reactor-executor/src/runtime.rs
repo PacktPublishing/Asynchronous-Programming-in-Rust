@@ -1,14 +1,10 @@
-pub use executor::{Executor, Waker, spawn};
+pub use executor::{spawn, Waker, Executor};
 pub use reactor::reactor;
 
-
-mod reactor;
 mod executor;
-
+mod reactor;
 
 pub fn init() -> Executor {
     reactor::start();
     Executor::new()
 }
-
-

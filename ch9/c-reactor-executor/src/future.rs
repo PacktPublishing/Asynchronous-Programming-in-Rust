@@ -1,5 +1,6 @@
 // NEW
-use std::thread::Thread;
+use std::{thread::Thread, sync::Arc};
+
 use crate::runtime::Waker;
 // END NEW
 
@@ -14,9 +15,6 @@ pub enum PollState<T> {
     Ready(T),
     NotReady,
 }
-// NEW
-
-// END NEW
 
 pub fn join_all<F: Future>(futures: Vec<F>) -> JoinAll<F> {
         let futures = futures.into_iter().map(|f| (false, f)).collect();

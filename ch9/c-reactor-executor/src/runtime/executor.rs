@@ -1,42 +1,65 @@
 use std::{
-    collections::{HashMap, VecDeque},
-    sync::{Arc, Mutex, OnceLock},
-    thread::{self, Thread},
+    collections::HashMap,
+    sync::{Arc, Mutex},
+    thread::{self, Thread}, cell::RefCell,
 };
 
 use crate::future::{Future, PollState};
 
-type Tasks = Arc<Mutex<VecDeque<Arc<dyn Future<Output = String> + 'static + Send + Sync>>>>;
-
-static READY_QUEUE: OnceLock<Tasks> = OnceLock::new();
-
-fn ready_queue<'a>() -> &'a Tasks {
-    READY_QUEUE.get().expect("ready_queue missing")
+thread_local! {
+    static CURRENT_EXEC: ExecutorCore = ExecutorCore::new();
 }
 
-pub struct Executor {
-    outstanding: usize,
+struct ExecutorCore {
+    tasks: RefCell<HashMap<usize, Box<dyn Future<Output = String>>>>,
+    ready_queue: Arc<Mutex<Vec<usize>>>,
+    next_id:  RefCell<usize>,
+}
+
+impl ExecutorCore {
+    fn new() -> Self {
+        Self {
+            tasks: RefCell::new(HashMap::new()),
+            ready_queue: Arc::new(Mutex::new(vec![])),
+            next_id: RefCell::new(1),
+        }
+    }
+
+    fn get_id(&self) -> usize {
+        let id = *self.next_id.borrow();
+        *self.next_id.borrow_mut() += 1;
+        id
+    }
+
+    fn spawn<F>(&self, future: F)
+    where
+    F: Future<Output = String> + 'static,
+    {
+        let id = self.get_id();
+        self.tasks.borrow_mut().insert(id, Box::new(future));
+        self.ready_queue.lock().map(|mut q| q.push(id));
+    }
+
+    fn pop_ready(&self) -> Option<usize> {
+        self.ready_queue.lock().map(|mut q| q.pop()).unwrap()
+    }
 }
 
 pub fn spawn<F>(future: F) -> JoinHandle
 where
-    F: Future<Output = String> + 'static + Send + Sync,
+    F: Future<Output = String> + 'static,
 {
-    ready_queue().lock().map(|queue| {
-        queue.push_back(Arc::new(future));
-    });
-
-    JoinHandle {  }
+    CURRENT_EXEC.with(|e| e.spawn(future));
+    JoinHandle {}
 }
+
+pub struct Executor;
 
 pub struct JoinHandle {}
 
 impl Executor {
     pub fn new() -> Self {
-        READY_QUEUE
-            .set(Arc::new(Mutex::new(VecDeque::new())))
-            .ok().unwrap();
-        Self { outstanding: 0 }
+        Self {}
     }
 
     pub fn block_on<F>(&mut self, future: F)
@@ -48,19 +71,23 @@ impl Executor {
         //let mut future = future;
         // let waker = Waker::new(thread::current());
         loop {
-            while let Some(mut f) = ready_queue().lock().map(|mut q| q.pop_front()).unwrap() {
-                let waker = Waker::new(f.clone(), thread::current());
+            while let Some(id) = CURRENT_EXEC.with(|q| q.pop_ready()) {
+                let mut future = CURRENT_EXEC.with(|q| q.tasks.borrow_mut().remove(&id).unwrap());
+                let waker = Waker::new(id, thread::current(), CURRENT_EXEC.with(|q| q.ready_queue.clone()));
                 match future.poll(&waker) {
-                    PollState::NotReady => self.outstanding += 1,
+                    PollState::NotReady => {
+                        CURRENT_EXEC.with(|q| q.tasks.borrow_mut().insert(id, future));
+                    },
 
-                    PollState::Ready(_) => self.outstanding -= 1,
+                    PollState::Ready(_) => (),
                 }
             }
-            if self.outstanding > 0 {
+            if CURRENT_EXEC.with(|q| q.tasks.borrow().len() > 0){
                 println!("Schedule other tasks\n");
                 thread::park();
             } else {
                 println!("All tasks are finished");
+                break;
             }
         }
     }
@@ -69,34 +96,20 @@ impl Executor {
 #[derive(Clone)]
 pub struct Waker {
     thread: Thread,
-    task: Arc<dyn Future<Output = String> + 'static + Send + Sync>,
+    id: usize,
+    ready_queue: Arc<Mutex<Vec<usize>>>,
 }
 
 impl Waker {
-    pub fn new<F>(task: Arc<F>, thread: Thread) -> Self
-    where
-        F: Future<Output = String> + 'static + Send + Sync + Sized,
+    pub fn new(id: usize, thread: Thread, ready_queue: Arc<Mutex<Vec<usize>>>) -> Self
     {
-        Self { task: task, thread }
+        Self { id, thread, ready_queue}
     }
 
     pub fn wake(&self) {
-        ready_queue()
+        self.ready_queue
             .lock()
-            .map(|mut q| q.push_back(self.task.clone()));
+            .map(|mut q| q.push(self.id)).unwrap();
         self.thread.unpark();
-    }
-}
-
-
-#[derive(Clone)]
-pub struct TreadWaker(Thread);
-
-impl TreadWaker {
-    pub fn new(thread: Thread) -> Self {
-        Self(thread)
-    }
-    fn wake(&self) {
-        self.0.unpark();
     }
 }
