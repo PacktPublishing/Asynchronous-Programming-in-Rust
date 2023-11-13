@@ -1,6 +1,8 @@
 use std::{
-    cell::RefCell,
+    borrow::BorrowMut,
+    cell::{Cell, RefCell},
     collections::HashMap,
+    rc::Rc,
     sync::{Arc, Mutex},
     thread::{self, Thread},
 };
@@ -10,79 +12,61 @@ use crate::future::{Future, PollState};
 type Task = Box<dyn Future<Output = String>>;
 
 thread_local! {
-    static CURRENT_EXEC: ExecutorCore = ExecutorCore::new();
+    static CURRENT_EXEC: RefCell<Option<Rc<ExecutorCore>>> = RefCell::new(None);
 }
 
+fn current() -> Rc<ExecutorCore> {
+    CURRENT_EXEC.with(|e| e.borrow().as_ref().expect("Executor not started").clone())
+}
+
+#[derive(Default)]
 struct ExecutorCore {
     tasks: RefCell<HashMap<usize, Task>>,
     ready_queue: Arc<Mutex<Vec<usize>>>,
-    next_id: RefCell<usize>,
+    next_id: Cell<usize>,
 }
 
-impl ExecutorCore {
-    fn new() -> Self {
-        Self {
-            tasks: RefCell::new(HashMap::new()),
-            ready_queue: Arc::new(Mutex::new(vec![])),
-            next_id: RefCell::new(1),
-        }
-    }
-
-    fn get_id(&self) -> usize {
-        let id = *self.next_id.borrow();
-        *self.next_id.borrow_mut() += 1;
-        id
-    }
-
-    fn spawn<F>(&self, future: F)
-    where
-        F: Future<Output = String> + 'static,
-    {
-        let id = self.get_id();
-        self.tasks.borrow_mut().insert(id, Box::new(future));
-        self.ready_queue.lock().map(|mut q| q.push(id)).unwrap();
-    }
-
-    fn pop_ready(&self) -> Option<usize> {
-        self.ready_queue.lock().map(|mut q| q.pop()).unwrap()
-    }
-}
-
-pub fn spawn<F>(future: F) -> JoinHandle
+pub fn spawn<F>(future: F)
 where
     F: Future<Output = String> + 'static,
 {
-    CURRENT_EXEC.with(|e| e.spawn(future));
-    JoinHandle {}
+    let e = current();
+    let id = e.next_id.get();
+    e.tasks.borrow_mut().insert(id, Box::new(future));
+    e.ready_queue.lock().map(|mut q| q.push(id)).unwrap();
+    e.next_id.set(id + 1);
 }
 
 pub struct Executor;
 
-pub struct JoinHandle {}
-
 impl Executor {
     pub fn new() -> Self {
+        CURRENT_EXEC.set(Some(Rc::new(ExecutorCore::default())));
         Self {}
     }
 
     fn pop_ready(&self) -> Option<usize> {
-        CURRENT_EXEC.with(|q| q.pop_ready())
+        current().ready_queue.lock().map(|mut q| q.pop()).unwrap()
     }
 
     fn get_future(&self, id: usize) -> Task {
-        CURRENT_EXEC.with(|q| q.tasks.borrow_mut().remove(&id).unwrap())
+        current().tasks.borrow_mut().remove(&id).unwrap()
     }
-    
+
     fn get_waker(&self, id: usize) -> Waker {
         Waker {
             id,
             thread: thread::current(),
-            ready_queue: CURRENT_EXEC.with(|q| q.ready_queue.clone()),
+            ready_queue: current().ready_queue.clone(),
         }
     }
-    
+
     fn insert_task(&self, id: usize, task: Task) {
-        CURRENT_EXEC.with(|q| q.tasks.borrow_mut().insert(id, task));
+        current().tasks.borrow_mut().insert(id, task);
+    }
+
+    fn task_count(&self) -> usize {
+        current().tasks.borrow().len()
     }
 
     pub fn block_on<F>(&mut self, future: F)
@@ -91,21 +75,20 @@ impl Executor {
     {
         spawn(future);
 
-        //let mut future = future;
-        // let waker = Waker::new(thread::current());
         loop {
             while let Some(id) = self.pop_ready() {
                 let mut future = self.get_future(id);
                 let waker = self.get_waker(id);
-                
+
                 match future.poll(&waker) {
                     PollState::NotReady => self.insert_task(id, future),
                     PollState::Ready(_) => continue,
                 }
             }
-            
-            if CURRENT_EXEC.with(|q| q.tasks.borrow().len() > 0) {
-                println!("Schedule other tasks\n");
+
+            let task_count = self.task_count();
+            if task_count > 0 {
+                println!("{task_count} pending tasks. Sleep until notified.\n");
                 thread::park();
             } else {
                 println!("All tasks are finished");
