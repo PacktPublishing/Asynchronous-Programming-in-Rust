@@ -5,11 +5,17 @@ use std::io::Write;
 
 const FN_KW: &str = "coro";
 const W_KW: &str = "wait";
+#[cfg(not(windows))]
+const L_TRM_LN: usize = 1;
+#[cfg(windows)]
+const L_TRM_LN: usize = 2;
 
 pub fn rewrite(src: String, dest: File) -> Result<(), impl Display> {
     let mut dest = dest;
     // Find the start point of async blocks
     let start_points = find_kw_start_points(&src);
+    
+    
 
     // No keywords, no async functions, do nothing
     if start_points.is_empty() {
@@ -45,7 +51,6 @@ pub fn rewrite(src: String, dest: File) -> Result<(), impl Display> {
     // Write everything except the async functions back to the file
     // (we put the rewritten code last in the file since it's easier
     // to see)
-
     let mut pos_tracker = 0;
     for (start, end) in &async_start_end {
         dest.write_all(&src[pos_tracker..*start].as_bytes())
@@ -87,14 +92,13 @@ fn find_kw_start_points(s: &str) -> Vec<usize> {
         match txt.find(FN_KW) {
             Some(kw_start) => {
                 start_points.push(index + kw_start);
-                index += line.len() + 1;
+                index += line.len() + L_TRM_LN;
             }
 
-            // remember that index is 0-based, len is 1-based,
-            // but line does not include `\n` so the number ends up equal
+           
             None => {
                 // An empty line will only be a `\n`
-                let len = if line.len() == 0 { 1 } else { line.len() + 1 };
+                let len = if line.len() == 0 { L_TRM_LN } else { line.len() + L_TRM_LN };
                 index += len;
             }
         }
@@ -291,6 +295,10 @@ impl Future for Coroutine{id} {{
         let impl_fut_first_args = format_args_names_only(&args);
 
         if i == 0 {
+            // if there are no futures in this "coro" fn we only have Start -> Resolved
+            
+            
+            
             let futname = &futures[i].1;
             write!(
                 &mut imp,
