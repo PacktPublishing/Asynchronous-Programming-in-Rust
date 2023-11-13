@@ -20,6 +20,7 @@ fn main() {
 //     let path = format!("/{}/HelloWorld{i}", i * 1000);
 //     let txt = Http::get(&path).wait;
 //     println!("{txt}");
+//
 
 // }
 
@@ -65,7 +66,7 @@ impl Future for Coroutine0 {
                 }
 
                 State0::Wait1(ref mut f1) => {
-                    match f1.poll(&waker) {
+                    match f1.poll(waker) {
                         PollState::Ready(txt) => {
                             // ---- Code you actually wrote ----
                             println!("{txt}");
@@ -92,7 +93,8 @@ impl Future for Coroutine0 {
 //     println!("Program starting");
 //
 //     for i in 0..5 {
-//         executor::spawn(request(i));
+//         let future = request(i);
+//         runtime::spawn(future);
 //     }
 
 // }
@@ -131,8 +133,10 @@ impl Future for Coroutine1 {
                 State1::Start => {
                     // ---- Code you actually wrote ----
                     println!("Program starting");
+
                     for i in 0..5 {
-                        runtime::spawn(request(i));
+                        let future = request(i);
+                        runtime::spawn(future);
                     }
 
                     // ---------------------------------

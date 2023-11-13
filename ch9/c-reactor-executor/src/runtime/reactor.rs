@@ -14,7 +14,7 @@ use crate::runtime::Waker;
 static REACTOR: OnceLock<Reactor> = OnceLock::new();
 
 pub fn reactor() -> &'static Reactor {
-    REACTOR.get().expect("Called outside an executor context")
+    REACTOR.get().expect("Called outside an runtime context")
 }
 
 type Wakers = Arc<Mutex<HashMap<usize, Waker>>>;

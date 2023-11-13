@@ -1,19 +1,22 @@
 use std::{
+    cell::RefCell,
     collections::HashMap,
     sync::{Arc, Mutex},
-    thread::{self, Thread}, cell::RefCell,
+    thread::{self, Thread},
 };
 
 use crate::future::{Future, PollState};
+
+type Task = Box<dyn Future<Output = String>>;
 
 thread_local! {
     static CURRENT_EXEC: ExecutorCore = ExecutorCore::new();
 }
 
 struct ExecutorCore {
-    tasks: RefCell<HashMap<usize, Box<dyn Future<Output = String>>>>,
+    tasks: RefCell<HashMap<usize, Task>>,
     ready_queue: Arc<Mutex<Vec<usize>>>,
-    next_id:  RefCell<usize>,
+    next_id: RefCell<usize>,
 }
 
 impl ExecutorCore {
@@ -33,11 +36,11 @@ impl ExecutorCore {
 
     fn spawn<F>(&self, future: F)
     where
-    F: Future<Output = String> + 'static,
+        F: Future<Output = String> + 'static,
     {
         let id = self.get_id();
         self.tasks.borrow_mut().insert(id, Box::new(future));
-        self.ready_queue.lock().map(|mut q| q.push(id));
+        self.ready_queue.lock().map(|mut q| q.push(id)).unwrap();
     }
 
     fn pop_ready(&self) -> Option<usize> {
@@ -62,27 +65,46 @@ impl Executor {
         Self {}
     }
 
+    fn pop_ready(&self) -> Option<usize> {
+        CURRENT_EXEC.with(|q| q.pop_ready())
+    }
+
+    fn get_future(&self, id: usize) -> Task {
+        CURRENT_EXEC.with(|q| q.tasks.borrow_mut().remove(&id).unwrap())
+    }
+    
+    fn get_waker(&self, id: usize) -> Waker {
+        Waker {
+            id,
+            thread: thread::current(),
+            ready_queue: CURRENT_EXEC.with(|q| q.ready_queue.clone()),
+        }
+    }
+    
+    fn insert_task(&self, id: usize, task: Task) {
+        CURRENT_EXEC.with(|q| q.tasks.borrow_mut().insert(id, task));
+    }
+
     pub fn block_on<F>(&mut self, future: F)
     where
-        F: Future<Output = String> + 'static + Send + Sync + Sized,
+        F: Future<Output = String> + 'static,
     {
         spawn(future);
 
         //let mut future = future;
         // let waker = Waker::new(thread::current());
         loop {
-            while let Some(id) = CURRENT_EXEC.with(|q| q.pop_ready()) {
-                let mut future = CURRENT_EXEC.with(|q| q.tasks.borrow_mut().remove(&id).unwrap());
-                let waker = Waker::new(id, thread::current(), CURRENT_EXEC.with(|q| q.ready_queue.clone()));
+            while let Some(id) = self.pop_ready() {
+                let mut future = self.get_future(id);
+                let waker = self.get_waker(id);
+                
                 match future.poll(&waker) {
-                    PollState::NotReady => {
-                        CURRENT_EXEC.with(|q| q.tasks.borrow_mut().insert(id, future));
-                    },
-
-                    PollState::Ready(_) => (),
+                    PollState::NotReady => self.insert_task(id, future),
+                    PollState::Ready(_) => continue,
                 }
             }
-            if CURRENT_EXEC.with(|q| q.tasks.borrow().len() > 0){
+            
+            if CURRENT_EXEC.with(|q| q.tasks.borrow().len() > 0) {
                 println!("Schedule other tasks\n");
                 thread::park();
             } else {
@@ -101,15 +123,11 @@ pub struct Waker {
 }
 
 impl Waker {
-    pub fn new(id: usize, thread: Thread, ready_queue: Arc<Mutex<Vec<usize>>>) -> Self
-    {
-        Self { id, thread, ready_queue}
-    }
-
     pub fn wake(&self) {
         self.ready_queue
             .lock()
-            .map(|mut q| q.push(self.id)).unwrap();
+            .map(|mut q| q.push(self.id))
+            .unwrap();
         self.thread.unpark();
     }
 }
