@@ -1,21 +1,22 @@
+use once_cell::sync::OnceCell;
 use std::error::Error;
-use std::fmt::{Write as WriteFmt, Display};
+use std::fmt::{Display, Write as WriteFmt};
 use std::fs::File;
 use std::io::Write;
 
 const FN_KW: &str = "coro";
 const W_KW: &str = "wait";
-#[cfg(not(windows))]
-const L_TRM_LN: usize = 1;
-#[cfg(windows)]
-const L_TRM_LN: usize = 2;
+static L_TRM_LN: OnceCell<usize> = OnceCell::new();
+
+fn l_trm_len() -> usize {
+    *L_TRM_LN.get().expect("Line terminator len not set")
+}
 
 pub fn rewrite(src: String, dest: File) -> Result<(), impl Display> {
+    detect_line_ending(&src);
     let mut dest = dest;
     // Find the start point of async blocks
     let start_points = find_kw_start_points(&src);
-    
-    
 
     // No keywords, no async functions, do nothing
     if start_points.is_empty() {
@@ -92,13 +93,16 @@ fn find_kw_start_points(s: &str) -> Vec<usize> {
         match txt.find(FN_KW) {
             Some(kw_start) => {
                 start_points.push(index + kw_start);
-                index += line.len() + L_TRM_LN;
+                index += line.len() + l_trm_len();
             }
 
-           
             None => {
                 // An empty line will only be a `\n`
-                let len = if line.len() == 0 { L_TRM_LN } else { line.len() + L_TRM_LN };
+                let len = if line.len() == 0 {
+                    l_trm_len()
+                } else {
+                    line.len() + l_trm_len()
+                };
                 index += len;
             }
         }
@@ -296,9 +300,23 @@ impl Future for Coroutine{id} {{
 
         if i == 0 {
             // if there are no futures in this "coro" fn we only have Start -> Resolved
-            
-            
-            
+            if futures.is_empty() {
+                write!(
+                    &mut imp,
+                    "
+        match self.state {{
+                State{id}::Start{impl_fut_first_args} => {{
+                    // ---- Code you actually wrote ----
+                {step}
+                    // ---------------------------------
+                    self.state = State{id}::Resolved;
+                    break PollState::Ready(String::new());
+                }}
+"
+                )?;
+                continue;
+            }
+
             let futname = &futures[i].1;
             write!(
                 &mut imp,
@@ -362,7 +380,7 @@ impl Future for Coroutine{id} {{
     // If we poll the future after it has resolved, we panic
     writeln!(
         &mut imp,
-            "
+        "
                 State{id}::Resolved => panic!(\"Polled a resolved future\")
             }}
         }}
@@ -436,4 +454,33 @@ fn format_args_names_only(args: &[(String, String)]) -> String {
         args_fmt.pop();
         format!("({args_fmt})")
     }
+}
+
+/// Since both text editors and github can change the line endings of files
+/// we need to account for \n line endings on Windows as well as \r\n.
+fn detect_line_ending(s: &str) {
+    let mut chars = s.chars().into_iter().peekable();
+
+    let len = loop {
+        let current = chars.next();
+        match chars.peek() {
+            Some(&'\n') => {
+                if let Some('\r') = current {
+                    break 2;
+                } else {
+                    break 1;
+                }
+            }
+            Some(_) => (),
+            None => {
+                // defaults if we for some reason fall through
+                if cfg!(windows) {
+                    break 2;
+                } else {
+                    break 1;
+                }
+            }
+        }
+    };
+    L_TRM_LN.set(len).unwrap();
 }
