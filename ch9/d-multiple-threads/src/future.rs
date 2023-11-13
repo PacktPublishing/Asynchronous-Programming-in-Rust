@@ -1,4 +1,6 @@
 // NEW
+use std::{thread::Thread, sync::Arc};
+
 use crate::runtime::Waker;
 // END NEW
 

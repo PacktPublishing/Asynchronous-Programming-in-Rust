@@ -1,6 +1,6 @@
 use std::io::{ErrorKind, Read, Write};
 
-use mio::Interest;
+use mio::{Interest, Registry, Token};
 
 use crate::{
     future::PollState,
