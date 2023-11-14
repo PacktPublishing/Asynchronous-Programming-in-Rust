@@ -18,6 +18,12 @@ use crate::http::Http;
 //     println!("{txt}");
 // }
 
+fn main() {
+    let future = async_main();
+    let mut runtime = Runtime::new();
+    runtime.block_on(future);
+}
+
 struct Coroutine {
     state: State,
 }
@@ -79,8 +85,4 @@ fn async_main() -> impl Future<Output = ()> {
     Coroutine::new()
 }
 
-fn main() {
-    let future = async_main();
-    let mut runtime = Runtime::new();
-    runtime.block_on(future);
-}
+

@@ -1,10 +1,11 @@
 use std::io::{ErrorKind, Read, Write};
 
-use mio::{Interest, Token, Registry};
+use mio::{Interest, Registry, Token};
 
 use crate::{
     future::{PollState, Waker},
-    runtime::{self, reactor}, Future,
+    runtime::{self, reactor},
+    Future,
 };
 
 fn get_req(path: &str) -> String {
@@ -72,6 +73,13 @@ impl Future for HttpGetFuture {
             self.write_request();
 
             // CHANGED
+            runtime::reactor().register(
+                self.stream.as_mut().unwrap(),
+                Interest::READABLE,
+                waker.clone(),
+                self.id,
+            );
+            // ============
         }
 
         let mut buff = vec![0u8; 4096];
@@ -87,14 +95,6 @@ impl Future for HttpGetFuture {
                     continue;
                 }
                 Err(e) if e.kind() == ErrorKind::WouldBlock => {
-                    // CHANGED
-                    runtime::reactor().register(
-                        self.stream.as_mut().unwrap(),
-                        Interest::READABLE,
-                        waker.clone(),
-                        self.id,
-                    );
-                    // ============
                     break PollState::NotReady;
                 }
 

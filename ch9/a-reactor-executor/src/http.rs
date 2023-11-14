@@ -70,7 +70,6 @@ impl Future for HttpGetFuture {
                 .register(self.stream.as_mut().unwrap(), Token(0), Interest::READABLE)
                 .unwrap();
             // ============
-            return PollState::NotReady;
         }
 
         let mut buff = vec![0u8; 4096];

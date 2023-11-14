@@ -62,7 +62,12 @@ impl Future for HttpGetFuture {
             println!("FIRST POLL - START OPERATION");
             self.write_request();
             // CHANGED
-
+            runtime::reactor().register(
+                        self.stream.as_mut().unwrap(),
+                        Interest::READABLE,
+                        waker.clone(),
+                        self.id,
+                    );
             // ============
         }
 
@@ -82,12 +87,7 @@ impl Future for HttpGetFuture {
                     if !self.buffer.is_empty() {
                         continue;
                     }
-                    runtime::reactor().register(
-                        self.stream.as_mut().unwrap(),
-                        Interest::READABLE,
-                        waker.clone(),
-                        self.id,
-                    );
+                    
                     break PollState::NotReady;
                 }
 
