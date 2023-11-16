@@ -1,6 +1,5 @@
-use mio::{Events, Poll, Registry};
-
 use crate::future::{Future, PollState};
+use mio::{Events, Poll, Registry};
 use std::sync::OnceLock;
 
 static REGISTRY: OnceLock<Registry> = OnceLock::new();
