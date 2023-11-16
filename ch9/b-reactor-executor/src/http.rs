@@ -1,12 +1,10 @@
-use std::io::{ErrorKind, Read, Write};
-
-use mio::{Interest, Registry, Token};
-
 use crate::{
     future::{PollState, Waker},
     runtime::{self, reactor},
     Future,
 };
+use mio::{Interest, Registry, Token};
+use std::io::{ErrorKind, Read, Write};
 
 fn get_req(path: &str) -> String {
     format!(
@@ -20,29 +18,20 @@ fn get_req(path: &str) -> String {
 pub struct Http;
 
 impl Http {
-    pub fn get(path: &'static str) -> impl Future<Output = String> {
-        HttpGetFuture::new(path)
-    }
-
-    fn get_req(path: &str) -> String {
-        format!(
-            "GET {path} HTTP/1.1\r\n\
-             Host: localhost\r\n\
-             Connection: close\r\n\
-             \r\n"
-        )
+    pub fn get(path: &str) -> impl Future<Output = String> {
+        HttpGetFuture::new(path.to_string())
     }
 }
 
 struct HttpGetFuture {
     stream: Option<mio::net::TcpStream>,
     buffer: Vec<u8>,
-    path: &'static str,
+    path: String,
     id: usize,
 }
 
 impl HttpGetFuture {
-    fn new(path: &'static str) -> Self {
+    fn new(path: String) -> Self {
         let id = reactor().next_id();
         Self {
             stream: None,
@@ -56,7 +45,7 @@ impl HttpGetFuture {
         let stream = std::net::TcpStream::connect("127.0.0.1:8080").unwrap();
         stream.set_nonblocking(true).unwrap();
         let mut stream = mio::net::TcpStream::from_std(stream);
-        stream.write_all(get_req(self.path).as_bytes()).unwrap();
+        stream.write_all(get_req(&self.path).as_bytes()).unwrap();
         self.stream = Some(stream);
     }
 }
