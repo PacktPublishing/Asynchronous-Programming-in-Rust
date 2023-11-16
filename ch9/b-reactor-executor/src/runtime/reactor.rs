@@ -25,17 +25,17 @@ pub struct Reactor {
 }
 
 impl Reactor {
-    pub fn register(&self, stream: &mut TcpStream, interest: Interest, waker: Waker, id: usize) {
-        let is_new = self
+    pub fn register(&self, stream: &mut TcpStream, interest: Interest, id: usize) {
+        self.registry.register(stream, Token(id), interest).unwrap();
+    }
+
+    pub fn set_waker(&self, waker: &Waker, id: usize) {
+        let _ = self
             .wakers
             .lock()
             // Must always store the most recent waker
-            .map(|mut w| w.insert(id, waker).is_none())
+            .map(|mut w| w.insert(id, waker.clone()).is_none())
             .unwrap();
-
-        if is_new {
-            self.registry.register(stream, Token(id), interest).unwrap();
-        }
     }
 
     pub fn deregister(&self, stream: &mut TcpStream, id: usize) {
@@ -71,20 +71,15 @@ fn event_loop(mut poll: Poll, wakers: Wakers) {
     loop {
         poll.poll(&mut events, None).unwrap();
         for e in events.iter() {
-            if e.is_read_closed() || e.is_write_closed() {
-                continue;
-            }
+            // if !e.is_readable() && e.is_read_closed() {
+            //     continue;
+            // }
             let Token(id) = e.token();
-            wakers
-                .lock()
-                .map(|w| {
-                    // if we removed it from the list we're done with this resource
-                    // and must not call wake!
-                    if let Some(waker) = w.get(&id) {
-                        waker.wake();
-                    }
-                })
-                .unwrap();
+            let wakers = wakers.lock().unwrap();
+
+            if let Some(waker) = wakers.get(&id) {
+                waker.wake();
+            }
         }
     }
 }

@@ -62,16 +62,13 @@ impl Future for HttpGetFuture {
             println!("FIRST POLL - START OPERATION");
             self.write_request();
             // CHANGED
-            runtime::reactor().register(
-                self.stream.as_mut().unwrap(),
-                Interest::READABLE,
-                waker.clone(),
-                self.id,
-            );
+            let stream = self.stream.as_mut().unwrap();
+            runtime::reactor().register(stream, Interest::READABLE, self.id);
+            runtime::reactor().set_waker(waker, self.id);
             // ============
         }
 
-        let mut buff = vec![0u8; 147];
+        let mut buff = vec![0u8; 1024];
         loop {
             match self.stream.as_mut().unwrap().read(&mut buff) {
                 Ok(0) => {
@@ -84,9 +81,8 @@ impl Future for HttpGetFuture {
                     continue;
                 }
                 Err(e) if e.kind() == ErrorKind::WouldBlock => {
-                    if !self.buffer.is_empty() {
-                        continue;
-                    }
+                    // always store the last given Waker
+                    runtime::reactor().set_waker(waker, self.id);
                     break PollState::NotReady;
                 }
 

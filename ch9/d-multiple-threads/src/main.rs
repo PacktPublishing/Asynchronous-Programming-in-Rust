@@ -10,7 +10,7 @@ use crate::http::Http;
 fn main() {
     let mut executor = runtime::init();
     let mut handles = vec![];
-    for i in 1..20 {
+    for i in 1..100 {
         let h = std::thread::Builder::new().name(format!("exec-{i}")).spawn(move || {
             let mut executor = Executor::new();
             executor.block_on(async_main());

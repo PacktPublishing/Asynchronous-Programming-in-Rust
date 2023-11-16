@@ -53,8 +53,8 @@ impl Executor {
         CURRENT_EXEC.with(|q| q.ready_queue.lock().map(|mut q| q.pop()).unwrap())
     }
 
-    fn get_future(&self, id: usize) -> Task {
-        CURRENT_EXEC.with(|q| q.tasks.borrow_mut().remove(&id).unwrap())
+    fn get_future(&self, id: usize) -> Option<Task> {
+        CURRENT_EXEC.with(|q| q.tasks.borrow_mut().remove(&id))
     }
 
     fn get_waker(&self, id: usize) -> Waker {
@@ -80,8 +80,13 @@ impl Executor {
         spawn(future);
 
         loop {
+
             while let Some(id) = self.pop_ready() {
-                let mut future = self.get_future(id);
+                let mut future = match self.get_future(id) {
+                    Some(f) => f,
+                    // guard against false wakeups
+                    None => continue,
+                };
                 let waker = self.get_waker(id);
 
                 match future.poll(&waker) {
@@ -95,7 +100,7 @@ impl Executor {
 
             if task_count > 0 {
                 println!("{name}: {task_count} pending tasks. Sleep until notified.");
-                thread::park_timeout(std::time::Duration::from_secs(1));
+                thread::park();
             } else {
                 println!("{name}: All tasks are finished");
                 break;
