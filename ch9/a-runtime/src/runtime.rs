@@ -6,7 +6,7 @@ use std::sync::OnceLock;
 static REGISTRY: OnceLock<Registry> = OnceLock::new();
 
 pub fn registry() -> &'static Registry {
-    REGISTRY.get().expect("Called outside an executor context")
+    REGISTRY.get().expect("Called outside a runtime context")
 }
 
 pub struct Runtime {
