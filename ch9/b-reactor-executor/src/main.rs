@@ -1,4 +1,3 @@
-
 mod future;
 mod http;
 mod runtime;
@@ -20,7 +19,6 @@ fn main() {
     let executor = runtime::init();
     executor.block_on(async_main());
 }
-
 
 struct Coroutine {
     state: State,

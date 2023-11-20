@@ -1,3 +1,5 @@
+use crate::future::Waker;
+use mio::{net::TcpStream, Events, Interest, Poll, Registry, Token};
 use std::{
     collections::HashMap,
     sync::{
@@ -7,14 +9,10 @@ use std::{
     thread,
 };
 
-use mio::{net::TcpStream, Events, Interest, Poll, Registry, Token};
-
-use crate::future::Waker;
-
 static REACTOR: OnceLock<Reactor> = OnceLock::new();
 
 pub fn reactor() -> &'static Reactor {
-    REACTOR.get().expect("Called outside an executor context")
+    REACTOR.get().expect("Called outside a runtime context")
 }
 
 type Wakers = Arc<Mutex<HashMap<usize, Waker>>>;

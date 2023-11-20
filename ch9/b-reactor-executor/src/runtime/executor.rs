@@ -1,7 +1,5 @@
+use crate::future::{Future, PollState, Waker};
 use std::thread;
-
-use crate::future::{Future, Waker, PollState};
-
 pub struct Executor;
 
 impl Executor {
@@ -21,7 +19,6 @@ impl Executor {
                     println!("Schedule other tasks\n");
                     thread::park();
                 }
-
                 PollState::Ready(_) => break,
             }
         }
