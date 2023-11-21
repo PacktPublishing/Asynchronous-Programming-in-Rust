@@ -1,4 +1,4 @@
-pub use executor::{spawn, Executor, Waker};
+pub use self::executor::Executor;
 pub use reactor::reactor;
 
 mod executor;

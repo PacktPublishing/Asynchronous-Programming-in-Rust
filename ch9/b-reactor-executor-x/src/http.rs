@@ -1,12 +1,10 @@
-use std::io::{ErrorKind, Read, Write};
-
-use mio::Interest;
-
 use crate::{
-    future::PollState,
-    runtime::{self, reactor, Waker},
+    future::{PollState, Waker},
+    runtime::{self, reactor},
     Future,
 };
+use mio::{Interest, Registry, Token};
+use std::io::{ErrorKind, Read, Write};
 
 fn get_req(path: &str) -> String {
     format!(
@@ -24,6 +22,7 @@ impl Http {
         HttpGetFuture::new(path.to_string())
     }
 }
+
 struct HttpGetFuture {
     stream: Option<mio::net::TcpStream>,
     buffer: Vec<u8>,
@@ -61,6 +60,7 @@ impl Future for HttpGetFuture {
         if self.stream.is_none() {
             println!("FIRST POLL - START OPERATION");
             self.write_request();
+
             // CHANGED
             let stream = self.stream.as_mut().unwrap();
             runtime::reactor().register(stream, Interest::READABLE, self.id);
@@ -68,7 +68,7 @@ impl Future for HttpGetFuture {
             // ============
         }
 
-        let mut buff = vec![0u8; 1024];
+        let mut buff = vec![0u8; 4096];
         loop {
             match self.stream.as_mut().unwrap().read(&mut buff) {
                 Ok(0) => {

@@ -1,4 +1,4 @@
-use crate::runtime::Waker;
+use crate::future::Waker;
 use mio::{net::TcpStream, Events, Interest, Poll, Registry, Token};
 use std::{
     collections::HashMap,
@@ -9,30 +9,13 @@ use std::{
     thread,
 };
 
-type Wakers = Arc<Mutex<HashMap<usize, Waker>>>;
-
 static REACTOR: OnceLock<Reactor> = OnceLock::new();
 
 pub fn reactor() -> &'static Reactor {
-    REACTOR.get().expect("Called outside an runtime context")
+    REACTOR.get().expect("Called outside a runtime context")
 }
 
-pub fn start() {
-    use thread::spawn;
-
-    let wakers = Arc::new(Mutex::new(HashMap::new()));
-    let poll = Poll::new().unwrap();
-    let registry = poll.registry().try_clone().unwrap();
-    let next_id = AtomicUsize::new(1);
-    let reactor = Reactor {
-        wakers: wakers.clone(),
-        registry,
-        next_id,
-    };
-
-    REACTOR.set(reactor).ok().expect("Reactor already running");
-    spawn(move || event_loop(poll, wakers));
-}
+type Wakers = Arc<Mutex<HashMap<usize, Waker>>>;
 pub struct Reactor {
     wakers: Wakers,
     registry: Registry,
@@ -76,4 +59,21 @@ fn event_loop(mut poll: Poll, wakers: Wakers) {
             }
         }
     }
+}
+pub fn start() {
+    use thread::spawn;
+
+    let wakers = Arc::new(Mutex::new(HashMap::new()));
+    let poll = Poll::new().unwrap();
+    let registry = poll.registry().try_clone().unwrap();
+    let next_id = AtomicUsize::new(1);
+    let reactor = Reactor {
+        wakers: wakers.clone(),
+        registry,
+        next_id,
+    };
+
+    REACTOR.set(reactor).ok().unwrap();
+
+    spawn(move || event_loop(poll, wakers));
 }

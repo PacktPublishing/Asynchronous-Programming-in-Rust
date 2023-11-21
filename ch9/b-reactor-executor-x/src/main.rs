@@ -2,9 +2,9 @@ mod future;
 mod http;
 mod runtime;
 
+use future::{Future, PollState, Waker};
+
 use crate::http::Http;
-use future::{Future, PollState};
-use runtime::Waker;
 
 // This state machine would be similar to the one created by:
 // async fn async_main() {
@@ -16,7 +16,7 @@ use runtime::Waker;
 // }
 
 fn main() {
-    let mut executor = runtime::init();
+    let executor = runtime::init();
     executor.block_on(async_main());
 }
 
@@ -40,7 +40,7 @@ impl Coroutine {
 }
 
 impl Future for Coroutine {
-    type Output = String;
+    type Output = ();
 
     fn poll(&mut self, waker: &Waker) -> PollState<Self::Output> {
         loop {
@@ -65,7 +65,7 @@ impl Future for Coroutine {
                     PollState::Ready(txt2) => {
                         println!("{txt2}");
                         self.state = State::Resolved;
-                        break PollState::Ready(String::new());
+                        break PollState::Ready(());
                     }
 
                     PollState::NotReady => break PollState::NotReady,
@@ -77,6 +77,6 @@ impl Future for Coroutine {
     }
 }
 
-fn async_main() -> impl Future<Output = String> {
+fn async_main() -> impl Future<Output = ()> {
     Coroutine::new()
 }

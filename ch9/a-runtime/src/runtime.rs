@@ -22,7 +22,7 @@ impl Runtime {
 
     pub fn block_on<F>(&mut self, future: F)
     where
-        F: Future<Output = ()>,
+        F: Future<Output = String>,
     {
         let mut future = future;
         loop {
