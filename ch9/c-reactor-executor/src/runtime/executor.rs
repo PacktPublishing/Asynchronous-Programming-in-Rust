@@ -1,11 +1,10 @@
+use crate::future::{Future, PollState};
 use std::{
-    cell::{RefCell, Cell},
+    cell::{Cell, RefCell},
     collections::HashMap,
     sync::{Arc, Mutex},
     thread::{self, Thread},
 };
-
-use crate::future::{Future, PollState};
 
 type Task = Box<dyn Future<Output = String>>;
 
@@ -39,7 +38,6 @@ where
         e.ready_queue.lock().map(|mut q| q.push(id)).unwrap();
         e.next_id.set(id + 1);
     });
-
 }
 
 pub struct Executor;
@@ -78,9 +76,7 @@ impl Executor {
         F: Future<Output = String> + 'static,
     {
         spawn(future);
-
         loop {
-
             while let Some(id) = self.pop_ready() {
                 let mut future = match self.get_future(id) {
                     Some(f) => f,
@@ -109,7 +105,7 @@ impl Executor {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Waker {
     thread: Thread,
     id: usize,

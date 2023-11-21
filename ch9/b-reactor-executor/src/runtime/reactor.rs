@@ -46,6 +46,20 @@ impl Reactor {
     }
 }
 
+fn event_loop(mut poll: Poll, wakers: Wakers) {
+    let mut events = Events::with_capacity(100);
+    loop {
+        poll.poll(&mut events, None).unwrap();
+        for e in events.iter() {
+            let Token(id) = e.token();
+            let wakers = wakers.lock().unwrap();
+
+            if let Some(waker) = wakers.get(&id) {
+                waker.wake();
+            }
+        }
+    }
+}
 pub fn start() {
     use thread::spawn;
 
@@ -62,22 +76,4 @@ pub fn start() {
     REACTOR.set(reactor).ok().unwrap();
 
     spawn(move || event_loop(poll, wakers));
-}
-
-fn event_loop(mut poll: Poll, wakers: Wakers) {
-    let mut events = Events::with_capacity(100);
-    loop {
-        poll.poll(&mut events, None).unwrap();
-        for e in events.iter() {
-            // if !e.is_readable() && e.is_read_closed() {
-            //     continue;
-            // }
-            let Token(id) = e.token();
-            let wakers = wakers.lock().unwrap();
-
-            if let Some(waker) = wakers.get(&id) {
-                waker.wake();
-            }
-        }
-    }
 }
