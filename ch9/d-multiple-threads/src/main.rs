@@ -10,7 +10,7 @@ use crate::http::Http;
 fn main() {
     let mut executor = runtime::init();
     let mut handles = vec![];
-    for i in 1..100 {
+    for i in 1..10 {
         let h = std::thread::Builder::new().name(format!("exec-{i}")).spawn(move || {
             let mut executor = Executor::new();
             executor.block_on(async_main());
@@ -143,8 +143,8 @@ impl Future for Coroutine1 {
                     // ---- Code you actually wrote ----
                     println!("Program starting");
 
-                    for i in 0..5 {
-                        let future = request(i);
+                    for i in 0..100 {
+                        let future = request(i % 10);
                         runtime::spawn(future);
                     }
 
