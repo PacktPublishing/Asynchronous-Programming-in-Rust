@@ -2,7 +2,6 @@ mod future;
 mod http;
 mod runtime;
 
-use crate::http::Http;
 use future::{Future, PollState};
 use runtime::Waker;
 
@@ -20,63 +19,92 @@ fn main() {
     executor.block_on(async_main());
 }
 
-struct Coroutine {
-    state: State,
+
+// =================================
+// We rewrite this:
+// =================================
+
+// coro fn async_main() {
+//     println!("Program starting");
+//     let txt = http::Http::get("/600/HelloAsyncAwait").wait;
+//     println!("{txt}");
+//     let txt = http::Http::get("/400/HelloAsyncAwait").wait;
+//     println!("{txt}");
+
+// }
+
+// =================================
+// Into this:
+// =================================
+
+fn async_main() -> impl Future<Output=String> {
+    Coroutine0::new()
 }
 
-enum State {
+enum State0 {
     Start,
     Wait1(Box<dyn Future<Output = String>>),
     Wait2(Box<dyn Future<Output = String>>),
     Resolved,
 }
 
-impl Coroutine {
+struct Coroutine0 {
+    state: State0,
+}
+
+impl Coroutine0 {
     fn new() -> Self {
-        Self {
-            state: State::Start,
-        }
+        Self { state: State0::Start }
     }
 }
 
-impl Future for Coroutine {
+
+impl Future for Coroutine0 {
     type Output = String;
 
     fn poll(&mut self, waker: &Waker) -> PollState<Self::Output> {
         loop {
-            match self.state {
-                State::Start => {
+        match self.state {
+                State0::Start => {
+                    // ---- Code you actually wrote ----
                     println!("Program starting");
-                    let fut = Box::new(Http::get("/600/HelloWorld1"));
-                    self.state = State::Wait1(fut);
+
+                    // ---------------------------------
+                    let fut1 = Box::new( http::Http::get("/600/HelloAsyncAwait"));
+                    self.state = State0::Wait1(fut1);
                 }
 
-                State::Wait1(ref mut fut) => match fut.poll(waker) {
-                    PollState::Ready(txt) => {
-                        println!("{txt}");
-                        let fut2 = Box::new(Http::get("/400/HelloWorld2"));
-                        self.state = State::Wait2(fut2);
+                State0::Wait1(ref mut f1) => {
+                    match f1.poll(waker) {
+                        PollState::Ready(txt) => {
+                            // ---- Code you actually wrote ----
+                            println!("{txt}");
+
+                            // ---------------------------------
+                            let fut2 = Box::new( http::Http::get("/400/HelloAsyncAwait"));
+                            self.state = State0::Wait2(fut2);
+                        }
+                        PollState::NotReady => break PollState::NotReady,
                     }
+                }
 
-                    PollState::NotReady => break PollState::NotReady,
-                },
+                State0::Wait2(ref mut f2) => {
+                    match f2.poll(waker) {
+                        PollState::Ready(txt) => {
+                            // ---- Code you actually wrote ----
+                            println!("{txt}");
 
-                State::Wait2(ref mut fut2) => match fut2.poll(waker) {
-                    PollState::Ready(txt2) => {
-                        println!("{txt2}");
-                        self.state = State::Resolved;
-                        break PollState::Ready(String::new());
+                            // ---------------------------------
+                            self.state = State0::Resolved;
+                            break PollState::Ready(String::new());
+                        }
+                        PollState::NotReady => break PollState::NotReady,
                     }
+                }
 
-                    PollState::NotReady => break PollState::NotReady,
-                },
-
-                State::Resolved => panic!("Polled a resolved future"),
+                State0::Resolved => panic!("Polled a resolved future")
             }
         }
     }
 }
 
-fn async_main() -> impl Future<Output = String> {
-    Coroutine::new()
-}
