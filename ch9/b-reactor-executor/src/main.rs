@@ -5,15 +5,6 @@ mod runtime;
 use future::{Future, PollState};
 use runtime::Waker;
 
-// This state machine would be similar to the one created by:
-// async fn async_main() {
-//     println!("Program starting");
-//     let txt = http::Http::get("/600/HelloAsyncAwait").await;
-//     println!("{txt}");
-//     let txt = http::Http::get("/400/HelloAsyncAwait").await;
-//     println!("{txt}");
-// }
-
 fn main() {
     let mut executor = runtime::init();
     executor.block_on(async_main());

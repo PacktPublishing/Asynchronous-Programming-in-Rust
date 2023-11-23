@@ -17,22 +17,6 @@ pub fn reactor() -> &'static Reactor {
     REACTOR.get().expect("Called outside an runtime context")
 }
 
-pub fn start() {
-    use thread::spawn;
-
-    let wakers = Arc::new(Mutex::new(HashMap::new()));
-    let poll = Poll::new().unwrap();
-    let registry = poll.registry().try_clone().unwrap();
-    let next_id = AtomicUsize::new(1);
-    let reactor = Reactor {
-        wakers: wakers.clone(),
-        registry,
-        next_id,
-    };
-
-    REACTOR.set(reactor).ok().expect("Reactor already running");
-    spawn(move || event_loop(poll, wakers));
-}
 pub struct Reactor {
     wakers: Wakers,
     registry: Registry,
@@ -77,3 +61,22 @@ fn event_loop(mut poll: Poll, wakers: Wakers) {
         }
     }
 }
+
+pub fn start() {
+    use thread::spawn;
+
+    let wakers = Arc::new(Mutex::new(HashMap::new()));
+    let poll = Poll::new().unwrap();
+    let registry = poll.registry().try_clone().unwrap();
+    let next_id = AtomicUsize::new(1);
+    let reactor = Reactor {
+        wakers: wakers.clone(),
+        registry,
+        next_id,
+    };
+
+    REACTOR.set(reactor).ok().expect("Reactor already running");
+    spawn(move || event_loop(poll, wakers));
+}
+
+

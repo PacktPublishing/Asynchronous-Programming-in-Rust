@@ -2,9 +2,10 @@ mod future;
 mod http;
 mod runtime;
 
-use crate::http::Http;
 use future::{Future, PollState};
 use runtime::Waker;
+
+use crate::http::Http;
 
 fn main() {
     let mut executor = runtime::init();

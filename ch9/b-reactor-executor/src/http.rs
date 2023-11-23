@@ -1,12 +1,10 @@
-use std::io::{ErrorKind, Read, Write};
-
-use mio::Interest;
-
 use crate::{
     future::PollState,
     runtime::{self, reactor, Waker},
     Future,
 };
+use mio::Interest;
+use std::io::{ErrorKind, Read, Write};
 
 fn get_req(path: &str) -> String {
     format!(
