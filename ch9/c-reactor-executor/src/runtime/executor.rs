@@ -9,23 +9,14 @@ use std::{
 type Task = Box<dyn Future<Output = String>>;
 
 thread_local! {
-    static CURRENT_EXEC: ExecutorCore = ExecutorCore::new();
+    static CURRENT_EXEC: ExecutorCore = ExecutorCore::default();
 }
 
+#[derive(Default)]
 struct ExecutorCore {
     tasks: RefCell<HashMap<usize, Task>>,
     ready_queue: Arc<Mutex<Vec<usize>>>,
     next_id: Cell<usize>,
-}
-
-impl ExecutorCore {
-    fn new() -> Self {
-        Self {
-            tasks: RefCell::new(HashMap::new()),
-            ready_queue: Arc::new(Mutex::new(vec![])),
-            next_id: Cell::new(1),
-        }
-    }
 }
 
 pub fn spawn<F>(future: F)
