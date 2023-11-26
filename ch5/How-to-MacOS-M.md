@@ -19,15 +19,30 @@ It should report `i386`.
 ## Important
 
 In the example: "c-fibers" and "d-fibers-closure" (and "e-fibers-windows"
-since it works on both platforms), you need to make a small change. The line:
+since it works on both platforms), you'll notice that we set a slightly
+different name when the function is exported on MacOS and even though we
+write `#[no_mangle]`, the compiler prepends the name of the function with an
+underscore `_`.
+
+This is due to the platform ABI on MacOS which expects functions to be prepended
+with `_`. So, when we call the function in our inline assembly later on
+we need to account for that. For example by changing:
 
 ```rust
 asm!("call switch", in("rdi") old, in("rsi") new, clobber_abi("C"));
 ```
-Needs to be changed to:
+
+To:
 
 ```rust
 asm!("call _switch", in("rdi") old, in("rsi") new, clobber_abi("C"));
 ```
 
-The only change is the added `_` before `switch`
+Another workaround is to strip the first byte of the name on
+export by adding the attribute below to the `switch` function:
+
+```rust
+#[cfg_attr(target_os = "macos", export_name = "\x01switch")]
+```
+
+You can read more about this here: https://github.com/rust-lang/rust/issues/35052#issuecomment-235420755
