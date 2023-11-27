@@ -1,18 +1,26 @@
 mod future;
 mod http;
 mod runtime;
-
-use future::{Future, PollState};
-use runtime::Waker;
-
 use crate::http::Http;
+use future::{Future, PollState};
+use runtime::{Executor, Waker};
+use std::thread::Builder;
 
 fn main() {
     let mut executor = runtime::init();
+    let mut handles = vec![];
+    
+    for i in 1..12 {
+        let name = format!("exec-{i}");
+        let h = Builder::new().name(name).spawn(move || {
+            let mut executor = Executor::new();
+            executor.block_on(async_main());
+        }).unwrap();
+        handles.push(h);
+    }
     executor.block_on(async_main());
+    handles.into_iter().for_each(|h| h.join().unwrap());
 }
-
-
 
 
 
@@ -25,7 +33,9 @@ fn main() {
 // coro fn request(i: usize) {
 //     let path = format!("/{}/HelloWorld{i}", i * 1000);
 //     let txt = Http::get(&path).wait;
+//     let txt = txt.lines().last().unwrap_or_default();
 //     println!("{txt}");
+// 
 // 
 
 // }
@@ -74,7 +84,9 @@ impl Future for Coroutine0 {
                     match f1.poll() {
                         PollState::Ready(txt) => {
                             // ---- Code you actually wrote ----
-                            println!("{txt}");
+                            let txt = txt.lines().last().unwrap_or_default();
+    println!("{txt}");
+
 
 
                             // ---------------------------------
