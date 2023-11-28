@@ -15,7 +15,7 @@ fn main() {
 // We rewrite this:
 // =================================
 
-// coro fn async_main() {
+// coroutine fn async_main() {
 //     println!("Program starting");
 //     let txt = http::Http::get("/600/HelloAsyncAwait").wait;
 //     println!("{txt}");

@@ -30,7 +30,7 @@ fn main() {
 // We rewrite this:
 // =================================
     
-// coro fn async_main() {
+// coroutine fn async_main() {
 //     println!("Program starting");
 // 
 //     let txt = Http::get(&get_path(0)).wait;

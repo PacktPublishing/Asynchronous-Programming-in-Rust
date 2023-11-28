@@ -4,7 +4,7 @@ use std::fmt::{Display, Write as WriteFmt};
 use std::fs::File;
 use std::io::Write;
 
-const FN_KW: &str = "coro";
+const FN_KW: &str = "coroutine";
 const W_KW: &str = "wait";
 static L_TRM_LN: OnceCell<usize> = OnceCell::new();
 

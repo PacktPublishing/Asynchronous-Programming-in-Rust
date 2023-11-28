@@ -29,7 +29,7 @@ fn main() {
 // We rewrite this:
 // =================================
 
-// coro fn request(i: usize) {
+// coroutine fn request(i: usize) {
 //     let path = format!("/{}/HelloWorld{i}", i * 1000);
 //     let txt = Http::get(&path).wait;
 //     let txt = txt.lines().last().unwrap_or_default();
@@ -105,7 +105,7 @@ impl Future for Coroutine0 {
 // We rewrite this:
 // =================================
 
-// coro fn async_main() {
+// coroutine fn async_main() {
 //     println!("Program starting");
 //
 //     for i in 0..5 {
