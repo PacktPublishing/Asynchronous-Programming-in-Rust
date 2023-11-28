@@ -42,6 +42,7 @@ fn main() {
 //     let txt = Http::get(&get_path(3)).wait;
 //     println!("{txt}");
 //     let txt = Http::get(&get_path(4)).wait;
+//     println!("{txt}");
 
 // }
 
@@ -150,7 +151,8 @@ impl Future for Coroutine0 {
                     match f5.poll() {
                         PollState::Ready(txt) => {
                             // ---- Code you actually wrote ----
-                        
+                            println!("{txt}");
+
                             // ---------------------------------
                             self.state = State0::Resolved;
                             break PollState::Ready(String::new());

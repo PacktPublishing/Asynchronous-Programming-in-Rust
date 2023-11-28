@@ -22,6 +22,7 @@ coro fn async_main() {
     let txt = Http::get(&get_path(3)).wait;
     println!("{txt}");
     let txt = Http::get(&get_path(4)).wait;
+    println!("{txt}");
 }
 
 
