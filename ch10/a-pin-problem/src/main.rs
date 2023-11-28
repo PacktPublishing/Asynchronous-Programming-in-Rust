@@ -19,7 +19,6 @@ fn main() {
 
 // coro fn async_main() {
 //     println!("Program starting");
-//     
 //     let txt = http::Http::get("/600/HelloAsyncAwait").wait;
 //     println!("{txt}");
 //     let txt = http::Http::get("/400/HelloAsyncAwait").wait;
