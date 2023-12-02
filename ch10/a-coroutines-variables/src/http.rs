@@ -1,6 +1,12 @@
-use crate::{future::PollState, runtime, Future};
-use mio::{Interest, Token};
 use std::io::{ErrorKind, Read, Write};
+
+use mio::{Interest, Registry, Token};
+
+use crate::{
+    future::PollState,
+    runtime::{self, reactor, Waker},
+    Future,
+};
 
 fn get_req(path: &str) -> String {
     format!(
@@ -18,19 +24,21 @@ impl Http {
         HttpGetFuture::new(path.to_string())
     }
 }
-
 struct HttpGetFuture {
     stream: Option<mio::net::TcpStream>,
     buffer: Vec<u8>,
     path: String,
+    id: usize,
 }
 
 impl HttpGetFuture {
     fn new(path: String) -> Self {
+        let id = reactor().next_id();
         Self {
             stream: None,
             buffer: vec![],
             path,
+            id,
         }
     }
 
@@ -46,23 +54,26 @@ impl HttpGetFuture {
 impl Future for HttpGetFuture {
     type Output = String;
 
-    fn poll(&mut self) -> PollState<Self::Output> {
+    fn poll(&mut self, waker: &Waker) -> PollState<Self::Output> {
+        // If this is first time polled, start the operation
+        // see: https://users.rust-lang.org/t/is-it-bad-behaviour-for-a-future-or-stream-to-do-something-before-being-polled/61353
+        // Avoid dns lookup this time
         if self.stream.is_none() {
             println!("FIRST POLL - START OPERATION");
             self.write_request();
-
             // CHANGED
-            runtime::registry()
-                .register(self.stream.as_mut().unwrap(), Token(0), Interest::READABLE)
-                .unwrap();
+            let stream = self.stream.as_mut().unwrap();
+            runtime::reactor().register(stream, Interest::READABLE, self.id);
+            runtime::reactor().set_waker(waker, self.id);
             // ============
         }
 
-        let mut buff = vec![0u8; 4096];
+        let mut buff = vec![0u8; 147];
         loop {
             match self.stream.as_mut().unwrap().read(&mut buff) {
                 Ok(0) => {
                     let s = String::from_utf8_lossy(&self.buffer);
+                    runtime::reactor().deregister(self.stream.as_mut().unwrap(), self.id);
                     break PollState::Ready(s.to_string());
                 }
                 Ok(n) => {
@@ -70,6 +81,8 @@ impl Future for HttpGetFuture {
                     continue;
                 }
                 Err(e) if e.kind() == ErrorKind::WouldBlock => {
+                    // always store the last given Waker
+                    runtime::reactor().set_waker(waker, self.id);
                     break PollState::NotReady;
                 }
 

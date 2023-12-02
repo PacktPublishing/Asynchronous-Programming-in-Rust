@@ -1,6 +1,14 @@
+// NEW
+use std::{thread::Thread, sync::Arc};
+
+use crate::runtime::Waker;
+// END NEW
+
+
 pub trait Future {
     type Output;
-    fn poll(&mut self) -> PollState<Self::Output>;
+    ///////////////////////// NEW
+    fn poll(&mut self, waker: &Waker) -> PollState<Self::Output>;
 }
 
 pub enum PollState<T> {
@@ -22,15 +30,15 @@ pub fn join_all<F: Future>(futures: Vec<F>) -> JoinAll<F> {
     }
 
     impl<F: Future> Future for JoinAll<F> {
-        type Output = ();
-
-        fn poll(&mut self) -> PollState<Self::Output> {
+        type Output = String;
+        ////////////////////////// HERE
+        fn poll(&mut self, waker: &Waker) -> PollState<Self::Output> {
             for (finished, fut) in self.futures.iter_mut() {
                 if *finished {
                     continue;
                 }
 
-                match fut.poll() {
+                match fut.poll(waker) {
                     PollState::Ready(_) => {
                         *finished = true;
                         self.finished_count += 1;
@@ -41,7 +49,7 @@ pub fn join_all<F: Future>(futures: Vec<F>) -> JoinAll<F> {
             }
 
             if self.finished_count == self.futures.len() {
-                PollState::Ready(())
+                PollState::Ready(String::new())
             } else {
                 PollState::NotReady
             }

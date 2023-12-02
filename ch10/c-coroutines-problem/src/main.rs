@@ -1,40 +1,37 @@
 mod future;
 mod http;
 mod runtime;
-
+use crate::http::Http;
 use future::{Future, PollState};
-use runtime::Runtime;
+use runtime::Waker;
 
 fn main() {
-    let future = async_main();
-    let mut runtime = Runtime::new();
-    runtime.block_on(future);
+    let mut executor = runtime::init();
+    executor.block_on(async_main());
 }
 
-
-
+use std::fmt::Write;
 // =================================
 // We rewrite this:
 // =================================
 
 // coro fn async_main() {
-//     let mut counter = 0; 
+//     let mut buffer = String::from("\nBUFFER:\n----\n");
+//     let writer = &mut buffer;
 //     println!("Program starting");
 //     let txt = http::Http::get("/600/HelloAsyncAwait").wait;
-//     println!("{txt}");
-//     counter += 1;
+//     writeln!(writer, "{txt}").unwrap();
 //     let txt = http::Http::get("/400/HelloAsyncAwait").wait;
-//     println!("{txt}");
-//     counter += 1;
-//     
-//     println!("Sent {} GET requests.", counter);
+//     writeln!(writer, "{txt}").unwrap();
+//
+//     println!("{}", buffer);
 // }
 
 // =================================
 // Into this:
 // =================================
 
-fn async_main() -> impl Future<Output=String> {
+fn async_main() -> impl Future<Output = String> {
     Coroutine0::new()
 }
 
@@ -47,7 +44,8 @@ enum State0 {
 
 #[derive(Default)]
 struct Stack0 {
-    counter: Option<usize>,
+    buffer: Option<String>,
+    writer: Option<*mut String>,
 }
 
 struct Coroutine0 {
@@ -57,75 +55,76 @@ struct Coroutine0 {
 
 impl Coroutine0 {
     fn new() -> Self {
-        Self { state: State0::Start, stack: Stack0::default() }
+        Self {
+            state: State0::Start,
+            stack: Stack0::default(),
+        }
     }
 }
-
 
 impl Future for Coroutine0 {
     type Output = String;
 
-    fn poll(&mut self) -> PollState<Self::Output> {
+    fn poll(&mut self, waker: &Waker) -> PollState<Self::Output> {
         loop {
-        match self.state {
+            match self.state {
                 State0::Start => {
-                    // restore stack (no stack yet)
-                    
+                    // initialize stack (hoist declarations - no stack yet)
+                    self.stack.buffer = Some(String::from("\nBUFFER:\n----\n"));
+                    self.stack.writer = Some(self.stack.buffer.as_mut().unwrap());
                     // ---- Code you actually wrote ----
-                    let mut counter = 0;
                     println!("Program starting");
 
                     // ---------------------------------
-                    let fut1 = Box::new( http::Http::get("/600/HelloAsyncAwait"));
+                    let fut1 = Box::new(http::Http::get("/600/HelloAsyncAwait"));
                     self.state = State0::Wait1(fut1);
-                    
+
                     // save stack
-                    self.stack.counter = Some(counter);
+                    // nothing to save
                 }
 
                 State0::Wait1(ref mut f1) => {
-                    match f1.poll() {
+                    match f1.poll(waker) {
                         PollState::Ready(txt) => {
                             // Restore stack
-                            let mut counter = self.stack.counter.take().unwrap();
-                            
+                            let writer = unsafe { &mut *self.stack.writer.take().unwrap() };
+
                             // ---- Code you actually wrote ----
-                            println!("{txt}");
-                            counter += 1;
+                            writeln!(writer, "{txt}").unwrap();
                             // ---------------------------------
-                            let fut2 = Box::new( http::Http::get("/400/HelloAsyncAwait"));
+                            let fut2 = Box::new(http::Http::get("/400/HelloAsyncAwait"));
                             self.state = State0::Wait2(fut2);
-                            
+
                             // save stack
-                            self.stack.counter = Some(counter);
+                            self.stack.writer = Some(writer);
                         }
                         PollState::NotReady => break PollState::NotReady,
                     }
                 }
 
                 State0::Wait2(ref mut f2) => {
-                    match f2.poll() {
+                    match f2.poll(waker) {
                         PollState::Ready(txt) => {
                             // Restore stack
-                            let mut counter = self.stack.counter.take().unwrap();
-                            
+                            let buffer = self.stack.buffer.as_ref().take().unwrap();
+                            let writer = unsafe { &mut *self.stack.writer.take().unwrap() };
+
                             // ---- Code you actually wrote ----
-                            println!("{txt}");
-                            counter += 1;
-                            
-                            println!("Sent {} GET requests.", counter);
+                            writeln!(writer, "{txt}").unwrap();
+
+                            println!("{}", buffer);
                             // ---------------------------------
                             self.state = State0::Resolved;
-                            
+
                             // Save stack (all variables set to None already)
-                            
+
                             break PollState::Ready(String::new());
                         }
                         PollState::NotReady => break PollState::NotReady,
                     }
                 }
 
-                State0::Resolved => panic!("Polled a resolved future")
+                State0::Resolved => panic!("Polled a resolved future"),
             }
         }
     }
