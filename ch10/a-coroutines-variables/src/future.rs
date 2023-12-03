@@ -1,13 +1,8 @@
-// NEW
-use std::{thread::Thread, sync::Arc};
-
 use crate::runtime::Waker;
-// END NEW
-
 
 pub trait Future {
     type Output;
-    ///////////////////////// NEW
+    
     fn poll(&mut self, waker: &Waker) -> PollState<Self::Output>;
 }
 
@@ -16,6 +11,7 @@ pub enum PollState<T> {
     NotReady,
 }
 
+#[allow(dead_code)]
 pub fn join_all<F: Future>(futures: Vec<F>) -> JoinAll<F> {
         let futures = futures.into_iter().map(|f| (false, f)).collect();
         JoinAll {

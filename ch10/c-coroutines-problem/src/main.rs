@@ -1,7 +1,6 @@
 mod future;
 mod http;
 mod runtime;
-use crate::http::Http;
 use future::{Future, PollState};
 use runtime::Waker;
 

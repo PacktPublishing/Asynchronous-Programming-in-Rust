@@ -1,8 +1,12 @@
+// NEW
+use std::pin::Pin;
 use crate::runtime::Waker;
+
 
 pub trait Future {
     type Output;
-    fn poll(&mut self, waker: &Waker) -> PollState<Self::Output>;
+
+    fn poll(self: Pin<&mut Self>, waker: &Waker) -> PollState<Self::Output>;
 }
 
 pub enum PollState<T> {
@@ -10,9 +14,11 @@ pub enum PollState<T> {
     NotReady,
 }
 
-#[allow(dead_code)]
+// =======================================================
+// Optional - we won't use this going forward
+// =======================================================
 pub fn join_all<F: Future>(futures: Vec<F>) -> JoinAll<F> {
-        let futures = futures.into_iter().map(|f| (false, f)).collect();
+        let futures = futures.into_iter().map(|f| (false, Box::pin(f))).collect();
         JoinAll {
             futures,
             finished_count: 0,
@@ -20,23 +26,23 @@ pub fn join_all<F: Future>(futures: Vec<F>) -> JoinAll<F> {
     }
 
     pub struct JoinAll<F: Future> {
-        futures: Vec<(bool, F)>,
+        futures: Vec<(bool, Pin<Box<F>>)>,
         finished_count: usize,
     }
 
     impl<F: Future> Future for JoinAll<F> {
         type Output = String;
-
-        fn poll(&mut self, waker: &Waker) -> PollState<Self::Output> {
-            for (finished, fut) in self.futures.iter_mut() {
+        fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> PollState<Self::Output> {
+            let Self { futures, finished_count } = &mut *self;
+            for (finished, fut) in futures.iter_mut() {
                 if *finished {
                     continue;
                 }
 
-                match fut.poll(waker) {
+                match fut.as_mut().poll(waker) {
                     PollState::Ready(_) => {
                         *finished = true;
-                        self.finished_count += 1;
+                       *finished_count += 1;
                     }
 
                     PollState::NotReady => continue,

@@ -1,6 +1,8 @@
-use std::{io::{ErrorKind, Read, Write}, pin::Pin};
-
-use mio::{Interest, Registry, Token};
+use mio::Interest;
+use std::{
+    io::{ErrorKind, Read, Write},
+    pin::Pin,
+};
 
 use crate::{
     future::PollState,
@@ -55,20 +57,13 @@ impl Future for HttpGetFuture {
     type Output = String;
 
     fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> PollState<Self::Output> {
-        // If this is first time polled, start the operation
-        // see: https://users.rust-lang.org/t/is-it-bad-behaviour-for-a-future-or-stream-to-do-something-before-being-polled/61353
-        // Avoid dns lookup this time
-        //let this = self.get_mut();
-
         let id = self.id;
         if self.stream.is_none() {
             println!("FIRST POLL - START OPERATION");
             self.write_request();
-            // CHANGED
             let stream = (&mut self).stream.as_mut().unwrap();
             runtime::reactor().register(stream, Interest::READABLE, id);
             runtime::reactor().set_waker(waker, self.id);
-            // ============
         }
 
         let mut buff = vec![0u8; 147];
@@ -84,7 +79,6 @@ impl Future for HttpGetFuture {
                     continue;
                 }
                 Err(e) if e.kind() == ErrorKind::WouldBlock => {
-                    // always store the last given Waker
                     runtime::reactor().set_waker(waker, self.id);
                     break PollState::NotReady;
                 }
