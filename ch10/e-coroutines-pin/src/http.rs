@@ -54,37 +54,38 @@ impl HttpGetFuture {
 impl Future for HttpGetFuture {
     type Output = String;
 
-    fn poll(self: Pin<&mut Self>, waker: &Waker) -> PollState<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, waker: &Waker) -> PollState<Self::Output> {
         // If this is first time polled, start the operation
         // see: https://users.rust-lang.org/t/is-it-bad-behaviour-for-a-future-or-stream-to-do-something-before-being-polled/61353
         // Avoid dns lookup this time
-        let this = self.get_mut();
+        //let this = self.get_mut();
 
-        if this.stream.is_none() {
+        let id = self.id;
+        if self.stream.is_none() {
             println!("FIRST POLL - START OPERATION");
-            this.write_request();
+            self.write_request();
             // CHANGED
-            let stream = this.stream.as_mut().unwrap();
-            runtime::reactor().register(stream, Interest::READABLE, this.id);
-            runtime::reactor().set_waker(waker, this.id);
+            let stream = (&mut self).stream.as_mut().unwrap();
+            runtime::reactor().register(stream, Interest::READABLE, id);
+            runtime::reactor().set_waker(waker, self.id);
             // ============
         }
 
         let mut buff = vec![0u8; 147];
         loop {
-            match this.stream.as_mut().unwrap().read(&mut buff) {
+            match self.stream.as_mut().unwrap().read(&mut buff) {
                 Ok(0) => {
-                    let s = String::from_utf8_lossy(&this.buffer).to_string();
-                    runtime::reactor().deregister(this.stream.as_mut().unwrap(), this.id);
+                    let s = String::from_utf8_lossy(&self.buffer).to_string();
+                    runtime::reactor().deregister(self.stream.as_mut().unwrap(), id);
                     break PollState::Ready(s.to_string());
                 }
                 Ok(n) => {
-                    this.buffer.extend(&buff[0..n]);
+                    self.buffer.extend(&buff[0..n]);
                     continue;
                 }
                 Err(e) if e.kind() == ErrorKind::WouldBlock => {
                     // always store the last given Waker
-                    runtime::reactor().set_waker(waker, this.id);
+                    runtime::reactor().set_waker(waker, self.id);
                     break PollState::NotReady;
                 }
 
