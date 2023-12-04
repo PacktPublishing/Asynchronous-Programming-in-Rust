@@ -118,7 +118,8 @@ impl Future for Coroutine0 {
                             // ---------------------------------
                             this.state = State0::Resolved;
 
-                            // Save stack (all variables set to None already)
+                            // Save stack / free resources
+                            let _ = this.stack.buffer.take();
 
                             break PollState::Ready(String::new());
                         }
