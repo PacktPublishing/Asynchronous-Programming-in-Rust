@@ -1,4 +1,5 @@
-use crate::future::{Future, PollState};
+use crate::{future::PollState, runtime, Future};
+use mio::{Interest, Token};
 use std::io::{ErrorKind, Read, Write};
 
 fn get_req(path: &str) -> String {
@@ -46,9 +47,6 @@ impl Future for HttpGetFuture {
     type Output = String;
 
     fn poll(&mut self) -> PollState<Self::Output> {
-        // If this is first time polled, start the operation
-        // see: https://users.rust-lang.org/t/is-it-bad-behaviour-for-a-future-or-stream-to-do-something-before-being-polled/61353
-        // Avoid dns lookup this time
         if self.stream.is_none() {
             println!("FIRST POLL - START OPERATION");
             self.write_request();

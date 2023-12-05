@@ -15,7 +15,7 @@ pub struct Http;
 
 impl Http {
     pub fn get(path: &str) -> impl Future<Output = String> {
-        HttpGetFuture::new(path.to_string())
+        HttpGetFuture::new(path)
     }
 }
 
@@ -26,11 +26,11 @@ struct HttpGetFuture {
 }
 
 impl HttpGetFuture {
-    fn new(path: String) -> Self {
+    fn new(path: &str) -> Self {
         Self {
             stream: None,
             buffer: vec![],
-            path,
+            path: path.to_string(),
         }
     }
 
@@ -50,12 +50,11 @@ impl Future for HttpGetFuture {
         if self.stream.is_none() {
             println!("FIRST POLL - START OPERATION");
             self.write_request();
-
+            
             // CHANGED
             runtime::registry()
                 .register(self.stream.as_mut().unwrap(), Token(0), Interest::READABLE)
                 .unwrap();
-            // ============
         }
 
         let mut buff = vec![0u8; 4096];
@@ -72,7 +71,9 @@ impl Future for HttpGetFuture {
                 Err(e) if e.kind() == ErrorKind::WouldBlock => {
                     break PollState::NotReady;
                 }
-
+                Err(e) if e.kind() == ErrorKind::Interrupted => {
+                    continue;
+                }
                 Err(e) => panic!("{e:?}"),
             }
         }
