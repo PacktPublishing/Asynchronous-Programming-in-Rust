@@ -1,14 +1,6 @@
+use crate::{future::PollState, runtime::{self, reactor, Waker}, Future};
 use mio::Interest;
-use std::{
-    io::{ErrorKind, Read, Write},
-    pin::Pin,
-};
-
-use crate::{
-    future::PollState,
-    runtime::{self, reactor, Waker},
-    Future,
-};
+use std::{io::{ErrorKind, Read, Write}, pin::Pin};
 
 fn get_req(path: &str) -> String {
     format!(
