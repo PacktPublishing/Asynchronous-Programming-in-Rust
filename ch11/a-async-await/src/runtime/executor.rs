@@ -4,11 +4,11 @@ use std::{
     future::Future,
     pin::Pin,
     sync::{Arc, Mutex},
-    task::{Poll, RawWaker, RawWakerVTable, Context, Waker},
+    task::{Poll, Context, Waker},
     thread::{self, Thread},
 };
 
-type Task = Pin<Box<dyn Future<Output = String>>>;
+type Task = Pin<Box<dyn Future<Output = ()>>>;
 
 thread_local! {
     static CURRENT_EXEC: ExecutorCore = ExecutorCore::default();
@@ -23,7 +23,7 @@ struct ExecutorCore {
 
 pub fn spawn<F>(future: F)
 where
-    F: Future<Output = String> + 'static,
+    F: Future<Output = ()> + 'static,
 {
     CURRENT_EXEC.with(|e| {
         let id = e.next_id.get();
@@ -66,7 +66,7 @@ impl Executor {
 
     pub fn block_on<F>(&mut self, future: F)
     where
-        F: Future<Output = String> + 'static,
+        F: Future<Output = ()> + 'static,
     {
         // ===== OPTIMIZATION, ASSUME READY
         // let waker = self.get_waker(usize::MAX);
