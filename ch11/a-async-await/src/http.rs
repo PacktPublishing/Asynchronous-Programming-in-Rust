@@ -1,15 +1,12 @@
 use std::{
     io::{ErrorKind, Read, Write},
     pin::Pin,
-    task::{Poll, Context},
+    task::{Poll, Context}, future::Future,
 };
 
 use mio::Interest;
 
-use crate::{
-    runtime::{self, reactor},
-    Future,
-};
+use crate::runtime::{self, reactor};
 
 fn get_req(path: &str) -> String {
     format!(
