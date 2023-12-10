@@ -1,5 +1,5 @@
 [package]
-name = "a-async-await"
+name = "a-rust-futures"
 version = "0.1.0"
 edition = "2021"
 
