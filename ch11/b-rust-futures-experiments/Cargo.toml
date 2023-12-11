@@ -1,10 +1,12 @@
 [package]
-name = "a-rust-futures"
+name = "b-rust-futures-experiments"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+isahc = "1.7"
 mio = { version = "0.8", features = ["net", "os-poll"] }
-
+reqwest = "0.11"
+tokio = { version = "1.35", features = ["full"] }
