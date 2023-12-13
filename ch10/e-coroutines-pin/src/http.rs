@@ -64,7 +64,7 @@ impl Future for HttpGetFuture {
                 Ok(0) => {
                     let s = String::from_utf8_lossy(&self.buffer).to_string();
                     runtime::reactor().deregister(self.stream.as_mut().unwrap(), id);
-                    break PollState::Ready(s.to_string());
+                    break PollState::Ready(s);
                 }
                 Ok(n) => {
                     self.buffer.extend(&buff[0..n]);
