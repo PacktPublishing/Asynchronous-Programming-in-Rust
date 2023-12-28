@@ -1,5 +1,4 @@
-use crate::{future::PollState, runtime, Future};
-use mio::{Interest, Token};
+use crate::{future::PollState, Future};
 use std::io::{ErrorKind, Read, Write};
 
 fn get_req(path: &str) -> String {
