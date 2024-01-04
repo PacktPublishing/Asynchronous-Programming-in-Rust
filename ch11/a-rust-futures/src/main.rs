@@ -5,7 +5,7 @@ use crate::http::Http;
 
 fn main() {
     let mut executor = runtime::init();
-    executor.block_on(async_main2());
+    executor.block_on(async_main());
 }
 
 async fn async_main() {
