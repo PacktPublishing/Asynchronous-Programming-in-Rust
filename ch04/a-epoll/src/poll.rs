@@ -1,4 +1,8 @@
-use std::{io::{self, Result}, net::TcpStream, os::fd::AsRawFd};
+use std::{
+    io::{self, Result},
+    net::TcpStream,
+    os::fd::AsRawFd,
+};
 
 use crate::ffi;
 
@@ -47,13 +51,11 @@ impl Poll {
     }
 }
 
-
 pub struct Registry {
     raw_fd: i32,
 }
 
 impl Registry {
-
     // NB! Mio inverts this, and `source` owns the register implementation
     pub fn register(&self, source: &TcpStream, token: usize, interests: i32) -> Result<()> {
         let mut event = ffi::Event {
@@ -62,9 +64,7 @@ impl Registry {
         };
 
         let op = ffi::EPOLL_CTL_ADD;
-        let res = unsafe {
-            ffi::epoll_ctl(self.raw_fd, op, source.as_raw_fd(), &mut event)
-        };
+        let res = unsafe { ffi::epoll_ctl(self.raw_fd, op, source.as_raw_fd(), &mut event) };
 
         if res < 0 {
             return Err(io::Error::last_os_error());
