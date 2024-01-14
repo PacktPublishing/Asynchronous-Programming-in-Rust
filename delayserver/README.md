@@ -6,9 +6,16 @@ for simulating slow servers and delayed responses.
 
 ## Usage
 
+In the delayserver folder run:
+
 ```
-in the delayserver folder run:
 cargo run delayserver
+```
+
+You can alternatively install the programm locally so it's always available in PATH:
+
+```
+cargo install --path .
 ```
 
 Delay server works by issuing a http GET request in the format: 
