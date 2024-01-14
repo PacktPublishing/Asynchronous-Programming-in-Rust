@@ -7,22 +7,21 @@ You can run the example by simply writing `cargo run`
 
 ## Note
 
-There is one downside of having a local server on the same machine to mimmic
+There is one downside of having a local server on the same machine to mimic
 real life behavior. The network will never be slow, and packages will never
 need to be resent. Latency is not a problem either.
 
 For example, encountering an actual `io::WouldBlock` error when reading
 from a `TcpStream` that's reported as ready is very hard, but if you
-want to test it out I manage to reliably get that error by simply transferring
+want to test it out I managed to reliably get that error by simply transferring
 so much data that the OS needs to do extra work to handle it.
 
 You can reproduce it if you make som minor changes to the delayserver code
-as well as the program in main.rs as outlined below. Simply copy and replace
-the appropirate functions with these will do it.
-
+as well as the program in `main.rs`` as outlined below. Simply copy and replace
+the appropriate functions with these will do it.
 
 First, change the `delay` function on the delayserver to return huge amount of fill data
-(enough to force a `WouldBlock` error on the reciever):
+(enough to force a `WouldBlock` error on the receiver):
 
 ```rust
 #[get("/{delay}/{message}")]
@@ -71,4 +70,3 @@ fn handle_events(events: &[Event], streams: &mut [TcpStream]) -> Result<usize> {
     Ok(handled_events)
 }
 ```
-

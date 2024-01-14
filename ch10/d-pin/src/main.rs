@@ -4,7 +4,7 @@ use std::{
 };
 
 fn main() {
-    // heap_pinning();
+    heap_pinning();
     //stack_pinning_manual();
     //stack_pinning_manual_problem();
     //stack_pinning_macro();
@@ -19,7 +19,6 @@ fn heap_pinning() {
     println!("{}", x.as_ref().a);
 }
 
-// Pinning stack
 fn stack_pinning_manual() {
     let mut x = MaybeSelfRef::default();
     let mut x = unsafe { Pin::new_unchecked(&mut x) };
@@ -86,7 +85,6 @@ fn pin_projection() {
         }
     }
 }
-
 
 #[derive(Default, Debug)]
 struct MaybeSelfRef {
