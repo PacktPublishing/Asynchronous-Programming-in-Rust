@@ -43,4 +43,4 @@ cargo run
 The implementation is wildly unsafe and only focuses on getting a working example running.
 The focus is on explaining the concepts as simply as possible and not best practices.
 
-While a fiber implementation like this will never be possible to do fully in safe Rust, there are many ways to make it safer, and it's a good readers excercise to do so. Just beware that you might have to change the API somewhat to make it safer since mutating global statics using raw pointers (and any mutating of what Rust assumes are exclusive borrows using the tricks we do in the `call` function) are a shure way to get undefined behavior and this example is no exception to that.
+While a fiber implementation like this will never be possible to do fully in safe Rust, there are many ways to make it safer, and it's a good readers exercise to do so. Just beware that you might have to change the API somewhat to make it safer since mutating global statics using raw pointers (and any mutating of what Rust assumes are exclusive borrows using the tricks we do in the `call` function) are a sure way to get undefined behavior and this example is no exception to that.

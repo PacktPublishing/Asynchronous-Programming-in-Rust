@@ -1,5 +1,5 @@
 [package]
-name = "ab-normal-syscall"
+name = "b-normal-syscall"
 version = "0.1.0"
 edition = "2021"
 

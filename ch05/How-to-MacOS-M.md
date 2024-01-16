@@ -1,4 +1,4 @@
-# How to run these examples on a Mac with an M-series chip
+# How to run these examples on a Mac with an M-seriXes chip
 
 Newer Macs use a chip using the ARM ISA, which won't work out of the box with
 these examples. However, these Macs ship with an emulation software called Rosetta
@@ -16,33 +16,21 @@ It should report `i386`.
 3. Run `rustup target add x86_64-apple-darwin`
 4. You can now run the examples using the command: `cargo run --target x86_64-apple-darwin`
 
-## Important
+## Note
 
 In the example: "c-fibers" and "d-fibers-closure" (and "e-fibers-windows"
-since it works on both platforms), you'll notice that we set a slightly
-different name when the function is exported on MacOS and even though we
-write `#[no_mangle]`, the compiler prepends the name of the function with an
-underscore `_`.
+since it works on both platforms), you'll notice that we use a conditional
+compilation attribute for `macos` targets.
 
 This is due to the platform ABI on MacOS which expects functions to be prepended
-with `_`. So, when we call the function in our inline assembly later on
-we need to account for that. For example by changing:
+with `_`. So, LLVM will by default add an underscore to our functions even if we
+tag them with `#[no_mangle]`.
 
-```rust
-asm!("call switch", in("rdi") old, in("rsi") new, clobber_abi("C"));
-```
-
-To:
-
-```rust
-asm!("call _switch", in("rdi") old, in("rsi") new, clobber_abi("C"));
-```
-
-Another workaround is to strip the first byte of the name on
-export by adding the attribute below to the `switch` function:
+The workaround we use is to strip the first byte of the name that's exported
+by LLVM on MacOS by adding the attribute below to the `switch` function:
 
 ```rust
 #[cfg_attr(target_os = "macos", export_name = "\x01switch")]
 ```
 
-You can read more about this here: https://github.com/rust-lang/rust/issues/35052#issuecomment-235420755
+You can read more about this here: <https://github.com/rust-lang/rust/issues/35052#issuecomment-235420755>

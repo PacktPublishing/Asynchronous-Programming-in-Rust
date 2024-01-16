@@ -6,7 +6,7 @@ pub struct Parker(Mutex<bool>, Condvar);
 impl Parker {
     pub fn park(&self) {
 
-        // We aquire a lock to the Mutex which protects our flag indicating if we
+        // We acquire a lock to the Mutex which protects our flag indicating if we
         // should resume execution or not.
         let mut resumable = self.0.lock().unwrap();
 
@@ -18,7 +18,7 @@ impl Parker {
                 resumable = self.1.wait(resumable).unwrap();
             }
 
-        // We immidiately set the condition to false, so that next time we call `park` we'll
+        // We immediately set the condition to false, so that next time we call `park` we'll
         // go right to sleep.
         *resumable = false;
     }
