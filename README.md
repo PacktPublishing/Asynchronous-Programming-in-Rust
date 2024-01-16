@@ -23,7 +23,7 @@ You have two options for running the delayserver:
 1. Go to the folder named `/delayserver` and write `cargo run` in a separate terminal window and leave it running there
 2. Go to the same folder and install the server by writing `cargo install --force --path .`. By doing so you install the program locally in you PATH so you can run it from any location by simply writing `delayserver` and leave the terminal process running.
 
-How delayserver works is described in the book, but you'll also find the relavant information in its root folder.
+How delayserver works is described in the book, but you'll also find the relevant information in its root folder.
 
 ## Corofy
 
