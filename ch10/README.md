@@ -1,3 +1,3 @@
-# Chapter 9 - Coroutines, Self-referential Structs and Pinning
+# Chapter 10 - Create Your Own Runtime
 
-This folder contains the code examples for Chapter 9.
+This folder contains the code examples for Chapter 10.

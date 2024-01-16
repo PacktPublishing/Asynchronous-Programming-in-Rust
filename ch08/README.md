@@ -1,10 +1,3 @@
-# Chapter 7 - Coroutines and async/await
+# Chapter 8 - Runtimes, Wakers and the Reactor-Executor Pattern
 
-This folder contains the code examples for Chapter 7.
-
-## Note
-
-This folder also contains `corofy` that you'll need to install locally since
-you need it in this and the following chapters.
-
-You'll find all the details on how to do this both in the book and in the [corofy](./corofy/) folder.
+This folder contains the code examples for Chapter 8.
