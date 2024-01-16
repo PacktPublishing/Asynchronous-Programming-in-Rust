@@ -14,13 +14,6 @@ When encountering examples in the book, you might find it easier to read the cod
 
 Even if you prefer to write the examples from the book line by line, you'll need the repository for `delayserver` and `corofy` which is two tools I wrote to help in the learning process.
 
-## I'll be going on a plane, how can I use the repository in an offline situation?
-
-You'll need to install both `delayserver` and `corofy` locally on your machine while you're online. The process is described below.
-
-Most of the examples have no external dependencies, but from chapter 6 onwards
-we will have some of them. The best way to be able to run these examples while offline is to enter each folder and use [cargo vendor](https://doc.rust-lang.org/cargo/commands/cargo-vendor.html) to vendor the dependencies locally. This way you'll be able to build and experiment with the examples even though you'll be offline.
-
 ## Delayserver
 
 Most of the examples will use a program called delayserver that's provided in this repository. Delayserver is a simple local webserver where you can write a HTTP GET request with a configurable delay.
@@ -33,5 +26,14 @@ You have two options for running the delayserver:
 ## Corofy
 
 Corofy is another tool that we'll use from chapter 7 onwards. I recommend installing this tool by entering the folder `ch7/corofy` and installing it on your machine by writing `cargo install --force --path .`
+
+## I'll be going on a plane, how can I use the repository in an offline situation?
+
+You'll need to install both `delayserver` and `corofy` locally on your machine while you're online. The process is described below.
+
+Most of the examples have no external dependencies, but from chapter 6 onwards
+we will have some of them. The best way to be able to run these examples while offline is to enter each folder and use [cargo vendor](https://doc.rust-lang.org/cargo/commands/cargo-vendor.html) to vendor the dependencies locally. This way you'll be able to build and experiment with the examples even though you'll be offline.
+
+----
 
 Asynchronous Programming in Rust, published by Packt
