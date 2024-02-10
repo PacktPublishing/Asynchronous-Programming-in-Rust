@@ -31,7 +31,7 @@ Corofy is another tool that we'll use from chapter 7 onwards. I recommend instal
 
 ## I'll be going on a plane, how can I use the repository in an offline situation?
 
-You'll need to install both `delayserver` and `corofy` locally on your machine while you're online. The process is described below.
+You'll need to install both `delayserver` and `corofy` locally on your machine while you're online. The process is described above.
 
 Most of the examples have no external dependencies, but from chapter 6 onwards
 we will have some of them. The best way to be able to run these examples while offline is to enter each folder and use [cargo vendor](https://doc.rust-lang.org/cargo/commands/cargo-vendor.html) to vendor the dependencies locally. This way you'll be able to build and experiment with the examples even though you'll be offline.
