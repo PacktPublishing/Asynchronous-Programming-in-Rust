@@ -12,7 +12,7 @@ coro fn request(i: usize) {
     println!("{txt}");
 }
 
-coro fn async_main() {
+coroutine fn async_main() {
     println!("Program starting");
     let mut futures = vec![];
 
