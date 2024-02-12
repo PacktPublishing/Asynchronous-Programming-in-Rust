@@ -1,3 +1,4 @@
+[workspace]
 [package]
 name = "corofy"
 version = "0.1.0"

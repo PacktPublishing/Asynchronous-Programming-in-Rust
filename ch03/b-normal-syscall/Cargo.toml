@@ -1,3 +1,4 @@
+[workspace]
 [package]
 name = "b-normal-syscall"
 version = "0.1.0"

@@ -1,3 +1,4 @@
+[workspace]
 [package]
 name = "c-reactor-executor"
 version = "0.1.0"

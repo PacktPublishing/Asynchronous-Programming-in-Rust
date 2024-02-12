@@ -1,3 +1,4 @@
+[workspace]
 [package]
 name = "d-fibers-closure"
 version = "0.1.0"

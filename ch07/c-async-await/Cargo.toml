@@ -1,3 +1,4 @@
+[workspace]
 [package]
 name = "c-async-await"
 version = "0.1.0"
