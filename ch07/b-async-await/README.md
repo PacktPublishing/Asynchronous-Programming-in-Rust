@@ -8,7 +8,7 @@ Install corofy by entering the `ch8/corofy` folder and
 write `cargo install --path .`.
 
 When that's done you can come back here and make sure that
-`src/main.rs` contains the same code as the `orignal_main.rs`
+`src/main.rs` contains the same code as the `original_main.rs`
 file does (which is the same as presented in the book).
 
 ## How to run the example
