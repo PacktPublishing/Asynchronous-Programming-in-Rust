@@ -1,41 +1,52 @@
-# Asynchronous Programming in Rust
+# Asynchronous Programming in Rust	
 
-This is the repository for the book: _Asynchronous Programming in Rust_.
+<a href="https://www.packtpub.com/product/asynchronous-programming-in-rust/9781805128137"><img src="https://content.packt.com/B20892/cover_image_small.jpg" alt="no-image" height="256px" align="right"></a>
 
-Written by Carl Fredrik Samson, published by Packt
+This is the code repository for [Asynchronous Programming in Rust](https://www.packtpub.com/product/asynchronous-programming-in-rust/9781805128137), published by Packt.
 
-## How to use this repository
+**Learn asynchronous programming by building working examples of futures, green threads, and runtimes**
 
-My clear recommendation is to clone this repository by either clicking on the `<> Code` button and select "Download ZIP" or clone the repository using your preferred git client.
+## What is this book about?
+Explore the nuances of transitioning from high-level languages to Rust with this book. Navigate potential frustrations arising from differences in modeling asynchronous program flow and recognize the need for a fundamental understanding of the topic.
 
-Each chapter has its own folder in this repository. Each example is organized as a standalone crate within that folder.
+This book covers the following exciting features:
+* Explore the essence of asynchronous program flow and its significance
+* Understand the difference between concurrency and parallelism
+* Gain insights into how computers and operating systems handle concurrent tasks
+* Uncover the mechanics of async/await
+* Understand Rust’s futures by implementing them yourself
+* Implement green threads from scratch to thoroughly understand them
 
-When encountering examples in the book, you might find it easier to read the code in the repository since you'll be able to open it up in the editor of your choice and have appropriate highlighting and formatting.
+If you feel this book is for you, get your [copy](https://www.amazon.com/Asynchronous-Programming-Rust-asynchronous-programming/dp/1805128132/ref=sr_1_1?crid=2NQEFXDPADDSG&keywords=asynchronous+programming+in+rust&qid=1707141670&sprefix=asynchronous+programming+in+r%2Caps%2C313&sr=8-1) today!
 
-Even if you only write the examples directly from the book line by line, you'll need the repository for `delayserver` and `corofy` which is two tools I wrote to help in the learning process.
+## Instructions and Navigations
+All of the code is organized into folders. For example, Chapter02.
 
-## Delayserver
+The code will look like the following:
+```
+pub trait Future {
+type Output;
+fn poll(&mut self) -> PollState<Self::Output>;
+}
 
-Most of the examples will use a program called delayserver that's provided in this repository. Delayserver is a simple local webserver where you can write a HTTP GET request with a configurable delay.
+```
 
-You have two options for running the delayserver:
+**Following is what you need for this book:**
 
-1. Go to the folder named `/delayserver` and write `cargo run` in a separate terminal window and leave it running there
-2. Go to the same folder and install the server by writing `cargo install --force --path .`. By doing so you install the program locally in you PATH so you can run it from any location by simply writing `delayserver` and leave the terminal process running.
+This book is for programmers who want to enhance their understanding of asynchronous programming, especially those experienced in VM’ed or interpreted languages like C#, Java, Python, JavaScript, and Go. If you work with C or C++ but have had limited exposure to asynchronous programming, this book serves as a resource to broaden your knowledge in this area.
+Although the examples are predominantly in Rust, the intricacies of Rust’s futures are covered in detail. So, anyone with a keen interest in learning Rust or with working knowledge of Rust will be able to get the most out of this book.
 
-How delayserver works is described in the book, but you'll also find the relevant information in its root folder.
+With the following software and hardware list you can run all code files present in the book (Chapter 1-10).
+### Software and Hardware List
+| Chapter | Software required | OS required |
+| -------- | ------------------------------------ | ----------------------------------- |
+| 1-10 | Rust (version 1.51 or later) | Windows, macOS, or Linux |
 
-## Corofy
 
-Corofy is another tool that we'll use from chapter 7 onwards. I recommend installing this tool locally by entering the folder `ch7/corofy` and installing it on your machine by writing `cargo install --force --path .`
+### Related products
+* Hands-On Concurrency with Rust [[Packt]](https://www.packtpub.com/product/hands-on-concurrency-with-rust/9781788399975) [[Amazon]](https://www.amazon.com/Hands-Concurrency-Rust-Confidently-memory-safe/dp/1788399978/ref=sr_1_1?crid=1S3COJO6XGV3Z&keywords=Hands-On+Concurrency+with+Rust&qid=1707141930&sprefix=hands-on+concurrency+with+rust%2Caps%2C291&sr=8-1)
 
-## I'll be going on a plane, how can I use the repository in an offline situation?
+* Hands-On Microservices with Rust [[Packt]](https://www.amazon.com/Hands-Microservices-Rust-scalable-microservices/dp/1789342759/ref=sr_1_1?crid=29U7MSUFK21FC&keywords=Hands-On+Microservices+with+Rust&qid=1707141998&sprefix=hands-on+concurrency+with+rust%2Caps%2C863&sr=8-1) [[Amazon]](https://www.amazon.com/Hands-Microservices-Rust-scalable-microservices/dp/1789342759/ref=sr_1_1?crid=29U7MSUFK21FC&keywords=Hands-On+Microservices+with+Rust&qid=1707141998&sprefix=hands-on+concurrency+with+rust%2Caps%2C863&sr=8-1)
 
-You'll need to install both `delayserver` and `corofy` locally on your machine while you're online. The process is described above.
-
-Most of the examples have no external dependencies, but from chapter 6 onwards
-we will have some of them. The best way to be able to run these examples while offline is to enter each folder and use [cargo vendor](https://doc.rust-lang.org/cargo/commands/cargo-vendor.html) to vendor the dependencies locally. This way you'll be able to build and experiment with the examples even though you'll be offline.
-
-----
-
-Asynchronous Programming in Rust, published by Packt
+## Get to Know the Author
+**Carl Fredrik Samson** is a popular technical writer, and his favorite topics to write about are asynchronous programming and Rust. During a period of 3 years, Carl set out to cover topics about asynchronous programming that he felt were severely under explained and tried to explain them in an informal and easy to understand manner. The bits and pieces he wrote were popular and translated to several languages. Some even ended up as parts of the official Asynchronous Programming in Rust book. Now, he has decided to put his combined works and knowledge into a book of its own. Carl has programmed since the early 1990s, has a Master in Strategy and Finance, and he has written production software for both his own business and as a hobby for over a decade.
