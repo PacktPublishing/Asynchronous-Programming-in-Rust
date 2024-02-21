@@ -42,6 +42,9 @@ With the following software and hardware list you can run all code files present
 | -------- | ------------------------------------ | ----------------------------------- |
 | 1-10 | Rust (version 1.51 or later) | Windows, macOS, or Linux |
 
+## Errata
+* Page 58 (Paragraph 3, line 1): **create** _should be_ **crate** 
+
 
 ### Related products
 * Hands-On Concurrency with Rust [[Packt]](https://www.packtpub.com/product/hands-on-concurrency-with-rust/9781788399975) [[Amazon]](https://www.amazon.com/Hands-Concurrency-Rust-Confidently-memory-safe/dp/1788399978/ref=sr_1_1?crid=1S3COJO6XGV3Z&keywords=Hands-On+Concurrency+with+Rust&qid=1707141930&sprefix=hands-on+concurrency+with+rust%2Caps%2C291&sr=8-1)
