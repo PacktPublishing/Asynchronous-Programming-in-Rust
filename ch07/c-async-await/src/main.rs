@@ -12,7 +12,7 @@ coroutine fn request(i: usize) {
     println!("{txt}");
 }
 
-future fn async_main() {
+coroutine fn async_main() {
     println!("Program starting");
     let mut futures = vec![];
 
