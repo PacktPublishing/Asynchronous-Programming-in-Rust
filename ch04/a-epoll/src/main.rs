@@ -1,4 +1,19 @@
+//! # FIXES:
+//!
+//! ## FIX ISSUE #4:
+//! See:https://github.com/PacktPublishing/Asynchronous-Programming-in-Rust/issues/4
+//! Some users reported false event notification causing the counter to increase
+//! due to the OS reporting a READ event after we already read the TcpStream to EOF.
+//! This caused the counter to increment on the same TcpStream twice and thereby
+//! exiting the program before all events were handled.
+//!
+//! The fix for this is to account for false wakeups which is an easy fix but requires
+//! a few changes to the example. I've added an explicit comment: "FIX #4", the places
+//! I made a change so it's easy to spot the differences to the example code in the book.
+
 use std::{
+    // FIX #4 (import `HashSet``)
+    collections::HashSet,
     io::{self, Read, Result, Write},
     net::TcpStream,
 };
@@ -20,7 +35,11 @@ fn get_req(path: &str) -> String {
     )
 }
 
-fn handle_events(events: &[Event], streams: &mut [TcpStream]) -> Result<usize> {
+fn handle_events(
+    events: &[Event],
+    streams: &mut [TcpStream],
+    handled: &mut HashSet<usize>,
+) -> Result<usize> {
     let mut handled_events = 0;
     for event in events {
         let index = event.token();
@@ -29,6 +48,13 @@ fn handle_events(events: &[Event], streams: &mut [TcpStream]) -> Result<usize> {
         loop {
             match streams[index].read(&mut data) {
                 Ok(n) if n == 0 => {
+                    // FIX #4
+                    // `insert` returns false if the value already existed in the set. We
+                    // handle it here since we must be sure that the TcpStream is fully
+                    // drained due to using edge triggered epoll.
+                    if !handled.insert(index) {
+                        break;
+                    }
                     handled_events += 1;
                     break;
                 }
@@ -73,6 +99,9 @@ fn main() -> Result<()> {
         streams.push(stream);
     }
 
+    // FIX #4: store the handled IDs
+    let mut handled_ids = HashSet::new();
+
     let mut handled_events = 0;
     while handled_events < n_events {
         let mut events = Vec::with_capacity(10);
@@ -83,7 +112,8 @@ fn main() -> Result<()> {
             continue;
         }
 
-        handled_events += handle_events(&events, &mut streams)?;
+        // ------------------------------------------------------⌄ FIX #4 (new signature)
+        handled_events += handle_events(&events, &mut streams, &mut handled_ids)?;
     }
 
     println!("FINISHED");
