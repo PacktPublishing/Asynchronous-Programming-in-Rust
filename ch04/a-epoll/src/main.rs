@@ -1,4 +1,5 @@
 //! # FIXES:
+//! The number is identical to the number in the GitHub issue tracker
 //!
 //! ## FIX ISSUE #4:
 //! See:https://github.com/PacktPublishing/Asynchronous-Programming-in-Rust/issues/4
@@ -38,6 +39,7 @@ fn get_req(path: &str) -> String {
 fn handle_events(
     events: &[Event],
     streams: &mut [TcpStream],
+    // FIX #4: accepts a set of handled events as argument
     handled: &mut HashSet<usize>,
 ) -> Result<usize> {
     let mut handled_events = 0;
@@ -67,7 +69,7 @@ fn handle_events(
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock => break,
                 // this was not in the book example, but it's a error condition
                 // you probably want to handle in some way (either by breaking
-                // out of the loop or trying a new read call immidiately)
+                // out of the loop or trying a new read call immediately)
                 Err(e) if e.kind() == io::ErrorKind::Interrupted => break,
                 Err(e) => return Err(e),
             }
