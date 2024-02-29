@@ -16,7 +16,7 @@ from a `TcpStream` that's reported as ready is very hard, but if you
 want to test it out I managed to reliably get that error by simply transferring
 so much data that the OS needs to do extra work to handle it.
 
-You can reproduce it if you make som minor changes to the delayserver code
+You can reproduce it if you make some minor changes to the delayserver code
 as well as the program in `main.rs`` as outlined below. Simply copy and replace
 the appropriate functions with these will do it.
 
