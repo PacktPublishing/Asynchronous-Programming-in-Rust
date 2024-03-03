@@ -13,8 +13,17 @@ fn main() {
 
 fn dereference(ptr: *const usize) -> usize {
     let mut res: usize;
-    unsafe { 
-        asm!("mov {0}, [{1}]", out(reg) res, in(reg) ptr)
+    unsafe {
+        #[cfg(target_arch = "x86_64")]
+        asm!("mov {0}, [{1}]", out(reg) res, in(reg) ptr);
+
+        #[cfg(target_arch = "aarch64")]
+        asm!("mov {0}, {1}", out(reg) res, in(reg) ptr);
+
+        if !(cfg!(target_arch = "aarch64") || cfg!(target_arch = "x86_64"))
+        {
+            panic!("Unverified architecture")
+        }
     };
     res
 }
