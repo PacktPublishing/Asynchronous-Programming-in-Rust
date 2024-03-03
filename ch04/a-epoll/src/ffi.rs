@@ -11,7 +11,17 @@ extern "C" {
 }
 
 #[derive(Debug)]
+#[cfg(not(target_arch = "aarch64"))]
 #[repr(C, packed)]
+pub struct Event {
+    pub(crate) events: u32,
+    // Token to identify event
+    pub(crate) epoll_data: usize,
+}
+
+#[derive(Debug)]
+#[cfg(target_arch = "aarch64")]
+#[repr(C)]
 pub struct Event {
     pub(crate) events: u32,
     // Token to identify event
