@@ -50,7 +50,8 @@ With the following software and hardware list you can run all code files present
 * Page 10 (Paragraph 10, line 1): **360 beers** _should be_ **340 beers**
 * Page 11 (Paragraph 2, line 2): **230 orders** _should be_ **175 orders**
 * Page 11 (Paragraph 2, line 3): **460 beers** _should be_ **350 beers**
-
+* Page 152 (Paragraph 3, line 1): **we** _should be_ **We**
+* Page 163 (Paragraph 4, line 2): **The next `coroutine/wait` function is `read_requests`** _should be_ **The next `coroutine/wait` function is `requests`**
 
 ### Related products
 * Hands-On Concurrency with Rust [[Packt]](https://www.packtpub.com/product/hands-on-concurrency-with-rust/9781788399975) [[Amazon]](https://www.amazon.com/Hands-Concurrency-Rust-Confidently-memory-safe/dp/1788399978/ref=sr_1_1?crid=1S3COJO6XGV3Z&keywords=Hands-On+Concurrency+with+Rust&qid=1707141930&sprefix=hands-on+concurrency+with+rust%2Caps%2C291&sr=8-1)
