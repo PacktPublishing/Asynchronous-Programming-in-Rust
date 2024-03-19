@@ -44,7 +44,7 @@ With the following software and hardware list you can run all code files present
 
 ## Errata
 * Page 58 (Paragraph 3, line 1): **create** _should be_ **crate**
-* Page 10 (Paragraph 8, line 3): **240 beers* _should be_ **180 beers**
+* Page 10 (Paragraph 8, line 3): **240 beers** _should be_ **180 beers**
 * Page 10 (Paragraph 9, line 1): **240 beers** _should be_ **180 beers**
 * Page 10 (Paragraph 9, line 4): **180 beers** _should be_ **170 beers**
 * Page 10 (Paragraph 10, line 1): **360 beers** _should be_ **340 beers**
