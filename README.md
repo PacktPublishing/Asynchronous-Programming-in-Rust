@@ -43,7 +43,13 @@ With the following software and hardware list you can run all code files present
 | 1-10 | Rust (version 1.51 or later) | Windows, macOS, or Linux |
 
 ## Errata
-* Page 58 (Paragraph 3, line 1): **create** _should be_ **crate** 
+* Page 58 (Paragraph 3, line 1): **create** _should be_ **crate**
+* Page 10 (Paragraph 8, line 3): **240 beers* _should be_ **180 beers**
+* Page 10 (Paragraph 9, line 1): **240 beers** _should be_ **180 beers**
+* Page 10 (Paragraph 9, line 4): **180 beers** _should be_ **170 beers**
+* Page 10 (Paragraph 10, line 1): **360 beers** _should be_ **340 beers**
+* Page 11 (Paragraph 2, line 2): **230 orders** _should be_ **175 orders**
+* Page 11 (Paragraph 2, line 3): **460 beers** _should be_ **350 beers**
 
 
 ### Related products
