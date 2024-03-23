@@ -20,7 +20,7 @@ fn main() {
     println!("{}", x);
 }
 
-#[cfg(target_arch = "x86-64")]
+#[cfg(target_arch = "x86_64")]
 fn dereference(ptr: *const usize) -> usize {
     let mut res: usize;
     unsafe {
