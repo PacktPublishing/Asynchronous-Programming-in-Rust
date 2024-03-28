@@ -1,3 +1,4 @@
+[workspace]
 [package]
 name = "b-coroutines-references"
 version = "0.1.0"

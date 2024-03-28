@@ -1,3 +1,4 @@
+[workspace]
 [package]
 name = "parker-bonus"
 version = "0.1.0"
