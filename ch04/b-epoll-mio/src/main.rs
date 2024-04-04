@@ -1,9 +1,9 @@
 //! # FIXES:
-//! 
+//!
 //! The number is identical to the number in the GitHub issue tracker
 //!
 //! ## FIX ISSUE #4:
-//! 
+//!
 //! See:https://github.com/PacktPublishing/Asynchronous-Programming-in-Rust/issues/4
 //! Some users reported false event notification causing the counter to increase
 //! due to the OS reporting a READ event after we already read the TcpStream to EOF.
@@ -13,19 +13,19 @@
 //! The fix for this is to account for false wakeups which is an easy fix but requires
 //! a few changes to the example. I've added an explicit comment: "FIX #4", the places
 //! I made a change so it's easy to spot the differences to the example code in the book.
-//! 
+//!
 //! ## TROUBLESHOOTING (KNOWN POTENTIAL ISSUE)
-//! 
+//!
 //! ### EXAMPLE DOESN'T WORK AS EXPECTED - PROBLEM WITH DNS LOOKUP
 //! If you first run this example on Linux under WSL and then immediately run it on
 //! Windows, I've observed issues with the DNS lookup for "localhost" being so slow
 //! that it defeats the purpose of the example. This issue could potentially also
 //! happen under other scenarios than the one mentioned here and the fix will be
 //! the same regardless.
-//! 
-//! I don't consider this a bug with our code but a surprising behavior of the 
-//! WSL/Windows network stack. Anyway, if you encounter this, the fix is simple: 
-//! 
+//!
+//! I don't consider this a bug with our code but a surprising behavior of the
+//! WSL/Windows network stack. Anyway, if you encounter this, the fix is simple:
+//!
 //! Change `let addr = "localhost:8080";` to `let addr = "127.0.0.1:8080";`.
 //!
 
@@ -58,9 +58,7 @@ fn handle_events(events: &[Event], streams: &mut [TcpStream], handled: &mut Hash
             match streams[index].read(&mut data) {
                 Ok(n) if n == 0 => {
                     // FIX #4
-                    // `insert` returns false if the value already existed in the set. We
-                    // handle it here since we must be sure that the TcpStream is fully
-                    // drained due to using edge triggered epoll.
+                    // `insert` returns false if the value already existed in the set.
                     if !handled.insert(index) {
                         break;
                     }
@@ -117,7 +115,7 @@ fn main() -> Result<()> {
 
         streams.push(stream);
     }
-    
+
     // FIX #4: store the handled IDs
     let mut handled_ids = HashSet::new();
 
@@ -139,7 +137,7 @@ fn main() -> Result<()> {
         // Events collection
         let events: Vec<Event> = events.into_iter().map(|e| e.clone()).collect();
         // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        
+
         // ------------------------------------------------------⌄ FIX #4 (new signature)
         handled_events += handle_events(&events, &mut streams, &mut handled_ids)?;
     }
