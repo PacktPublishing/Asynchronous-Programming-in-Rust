@@ -295,7 +295,7 @@ impl Future for Coroutine{id} {{
         // We need to special case the first call since that
         // happens before we reach an `await` point
 
-        // This will recieve the input args to the function
+        // This will receive the input args to the function
         let impl_fut_first_args = format_args_names_only(&args);
 
         if i == 0 {
@@ -332,7 +332,7 @@ impl Future for Coroutine{id} {{
 "
             )?;
 
-        // These steps are await-ponts where we await a future
+        // These steps are await-points where we await a future
         } else if i < steps.len() - 1 {
             let varname = &futures[i - 1].0;
             let fut = &futures[i].1;

@@ -4,7 +4,7 @@
 //! ## FIX ISSUE #11:
 //! See:https://github.com/PacktPublishing/Asynchronous-Programming-in-Rust/issues/11
 //! The book didn't make it clear that this example will only work on `x86-64` architecture,
-//! so users on newer M-series macs (which uses the ARM64 instruciton set), will get a
+//! so users on newer M-series macs (which uses the ARM64 instruction set), will get a
 //! compilation error. This is solved by conditionally compiling a version that works
 //! with the  ARM64 instruction set.
 

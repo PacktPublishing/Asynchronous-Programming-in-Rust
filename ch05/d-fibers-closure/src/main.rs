@@ -197,7 +197,7 @@ unsafe fn switch() {
     );
 }
 
-// The main function has aslo changed
+// The main function has also changed
 #[cfg(not(windows))]
 pub fn main() {
     let mut runtime = Runtime::new();
