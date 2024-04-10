@@ -4,9 +4,9 @@ use actix_web::{Responder, get, HttpServer, App, web, rt::time::sleep};
 const EXPLANATION: &str =
 "USAGE:
 Delay server works by issuing a http GET request in the format:
-http://localhost:8080/[delay in ms]/[UrlEncoded meesage]
+http://localhost:8080/[delay in ms]/[UrlEncoded message]
 
-On reception, it immidiately reports the following to the console:
+On reception, it immediately reports the following to the console:
 {Message #} - {delay in ms}: {message}
 
 The server then delays the response for the requested time and echoes the message back to the caller.
