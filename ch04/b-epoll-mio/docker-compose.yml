@@ -1,0 +1,17 @@
+services:
+  delayserver:
+    build: ../../delayserver/
+    ports:
+      - "8080:8080"
+    networks:
+      - delayserver_network
+
+  epoll-mio:
+    build: .
+    depends_on:
+      - delayserver
+    networks:
+      - delayserver_network
+
+networks:
+  delayserver_network: {}

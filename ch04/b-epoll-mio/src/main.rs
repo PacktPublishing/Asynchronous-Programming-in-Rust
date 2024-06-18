@@ -1,9 +1,9 @@
 //! # FIXES:
-//! 
+//!
 //! The number is identical to the number in the GitHub issue tracker
 //!
 //! ## FIX ISSUE #4:
-//! 
+//!
 //! See:https://github.com/PacktPublishing/Asynchronous-Programming-in-Rust/issues/4
 //! Some users reported false event notification causing the counter to increase
 //! due to the OS reporting a READ event after we already read the TcpStream to EOF.
@@ -13,24 +13,25 @@
 //! The fix for this is to account for false wakeups which is an easy fix but requires
 //! a few changes to the example. I've added an explicit comment: "FIX #4", the places
 //! I made a change so it's easy to spot the differences to the example code in the book.
-//! 
+//!
 //! ## TROUBLESHOOTING (KNOWN POTENTIAL ISSUE)
-//! 
+//!
 //! ### EXAMPLE DOESN'T WORK AS EXPECTED - PROBLEM WITH DNS LOOKUP
 //! If you first run this example on Linux under WSL and then immediately run it on
 //! Windows, I've observed issues with the DNS lookup for "localhost" being so slow
 //! that it defeats the purpose of the example. This issue could potentially also
 //! happen under other scenarios than the one mentioned here and the fix will be
 //! the same regardless.
-//! 
-//! I don't consider this a bug with our code but a surprising behavior of the 
-//! WSL/Windows network stack. Anyway, if you encounter this, the fix is simple: 
-//! 
-//! Change `let addr = "localhost:8080";` to `let addr = "127.0.0.1:8080";`.
+//!
+//! I don't consider this a bug with our code but a surprising behavior of the
+//! WSL/Windows network stack. Anyway, if you encounter this, the fix is simple:
+//!
+//! Change `base_url = String::from("localhost");` to `base_url = String::from("127.0.0.1");`.
 //!
 
 // FIX #4 (import `HashSet``)
 use std::collections::HashSet;
+use std::env;
 use std::io::{self, Read, Result, Write};
 
 use mio::event::Event;
@@ -91,13 +92,21 @@ fn main() -> Result<()> {
     let n_events = 5;
 
     let mut streams = vec![];
-    let addr = "localhost:8080";
+
+    let args: Vec<String> = env::args().collect();
+    let base_url;
+    if args.len() > 1 {
+        base_url = args[1].clone();
+    } else {
+        base_url = String::from("localhost");
+    }
+    let addr = format!("{}:8080", &base_url);
 
     for i in 0..n_events {
         let delay = (n_events - i) * 1000;
         let url_path = format!("/{delay}/request-{i}");
         let request = get_req(&url_path);
-        let std_stream = std::net::TcpStream::connect(addr)?;
+        let std_stream = std::net::TcpStream::connect(&addr)?;
         std_stream.set_nonblocking(true)?;
 
         // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -117,7 +126,7 @@ fn main() -> Result<()> {
 
         streams.push(stream);
     }
-    
+
     // FIX #4: store the handled IDs
     let mut handled_ids = HashSet::new();
 
@@ -139,7 +148,7 @@ fn main() -> Result<()> {
         // Events collection
         let events: Vec<Event> = events.into_iter().map(|e| e.clone()).collect();
         // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        
+
         // ------------------------------------------------------⌄ FIX #4 (new signature)
         handled_events += handle_events(&events, &mut streams, &mut handled_ids)?;
     }
