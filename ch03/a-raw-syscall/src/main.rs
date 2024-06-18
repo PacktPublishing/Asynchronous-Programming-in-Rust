@@ -50,7 +50,7 @@ fn syscall(message: String) {
 }
 
 // ----------------------------------------------------------------------------
-// macOS raw syscall when running newer M familiy CPU (ARM 64 architecture)
+// macOS raw syscall when running newer M family CPU (ARM 64 architecture)
 // ----------------------------------------------------------------------------
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]

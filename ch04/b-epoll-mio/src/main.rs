@@ -59,9 +59,7 @@ fn handle_events(events: &[Event], streams: &mut [TcpStream], handled: &mut Hash
             match streams[index].read(&mut data) {
                 Ok(n) if n == 0 => {
                     // FIX #4
-                    // `insert` returns false if the value already existed in the set. We
-                    // handle it here since we must be sure that the TcpStream is fully
-                    // drained due to using edge triggered epoll.
+                    // `insert` returns false if the value already existed in the set.
                     if !handled.insert(index) {
                         break;
                     }

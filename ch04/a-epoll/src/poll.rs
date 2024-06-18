@@ -45,7 +45,7 @@ impl Poll {
             return Err(io::Error::last_os_error());
         };
 
-        // This is safe because epol_wait ensures that `res` events are assigned.
+        // This is safe because epoll_wait ensures that `res` events are assigned.
         unsafe { events.set_len(res as usize) };
         Ok(())
     }
