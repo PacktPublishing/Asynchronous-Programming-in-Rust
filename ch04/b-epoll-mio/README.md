@@ -1,9 +1,12 @@
-# a-epoll-mio
+# b-epoll-mio
 
 This create contains the example code for chapter 4, but instead of using
 our own queue, we use one created by [mio](https://github.com/tokio-rs/mio). Since we modelled our own code after
 mio you only need to make a few very minor changes to get it working which I've
 commented and marked out as clearly as I can.
+
+If running on a Mac system (which only supports kqueue but not epoll), docker
+can be used to run the example by running the epoll_mio_docker.sh script
 
 You can run the example by simply writing `cargo run`
 

@@ -1,4 +1,4 @@
-use std::{time::Duration, sync::atomic::{AtomicUsize, Ordering}};
+use std::{time::Duration, sync::atomic::{AtomicUsize, Ordering}, env};
 use actix_web::{Responder, get, HttpServer, App, web, rt::time::sleep};
 
 const EXPLANATION: &str =
@@ -6,7 +6,11 @@ const EXPLANATION: &str =
 Delay server works by issuing a http GET request in the format:
 http://localhost:8080/[delay in ms]/[UrlEncoded message]
 
-On reception, it immediately reports the following to the console:
+If an argument is passed in when delayserver is started, that
+argument will be used as the url instead of 'localhost'
+
+On reception, it immieiately reports the following to the console:
+
 {Message #} - {delay in ms}: {message}
 
 The server then delays the response for the requested time and echoes the message back to the caller.
@@ -27,12 +31,19 @@ async fn delay(path: web::Path<(u64, String)>) -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    let args: Vec<String> = env::args().collect();
+    let url;
+    if args.len() > 1 {
+        url = args[1].clone();
+    } else {
+        url = String::from("localhost");
+    }
     println!("{EXPLANATION}");
     HttpServer::new(|| {
         App::new()
         .service(delay)
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind((url, 8080))?
     .run()
     .await
 }

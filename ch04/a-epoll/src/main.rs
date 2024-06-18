@@ -17,6 +17,7 @@ use std::{
     collections::HashSet,
     io::{self, Read, Result, Write},
     net::TcpStream,
+    env
 };
 
 use ffi::Event;
@@ -82,13 +83,21 @@ fn main() -> Result<()> {
     let n_events = 5;
 
     let mut streams = vec![];
-    let addr = "localhost:8080";
+
+    let args: Vec<String> = env::args().collect();
+    let base_url;
+    if args.len() > 1 {
+        base_url = args[1].clone();
+    } else {
+        base_url = String::from("localhost");
+    }
+    let addr = format!("{}:8080", &base_url);
 
     for i in 0..n_events {
         let delay = (n_events - i) * 1000;
         let url_path = format!("/{delay}/request-{i}");
         let request = get_req(&url_path);
-        let mut stream = std::net::TcpStream::connect(addr)?;
+        let mut stream = std::net::TcpStream::connect(&addr)?;
         stream.set_nonblocking(true)?;
 
         stream.write_all(request.as_bytes())?;
