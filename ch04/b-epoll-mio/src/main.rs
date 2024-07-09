@@ -26,11 +26,12 @@
 //! I don't consider this a bug with our code but a surprising behavior of the
 //! WSL/Windows network stack. Anyway, if you encounter this, the fix is simple:
 //!
-//! Change `let addr = "localhost:8080";` to `let addr = "127.0.0.1:8080";`.
+//! Change `base_url = String::from("localhost");` to `base_url = String::from("127.0.0.1");`.
 //!
 
 // FIX #4 (import `HashSet``)
 use std::collections::HashSet;
+use std::env;
 use std::io::{self, Read, Result, Write};
 
 use mio::event::Event;
@@ -89,13 +90,21 @@ fn main() -> Result<()> {
     let n_events = 5;
 
     let mut streams = vec![];
-    let addr = "localhost:8080";
+
+    let args: Vec<String> = env::args().collect();
+    let base_url;
+    if args.len() > 1 {
+        base_url = args[1].clone();
+    } else {
+        base_url = String::from("localhost");
+    }
+    let addr = format!("{}:8080", &base_url);
 
     for i in 0..n_events {
         let delay = (n_events - i) * 1000;
         let url_path = format!("/{delay}/request-{i}");
         let request = get_req(&url_path);
-        let std_stream = std::net::TcpStream::connect(addr)?;
+        let std_stream = std::net::TcpStream::connect(&addr)?;
         std_stream.set_nonblocking(true)?;
 
         // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
