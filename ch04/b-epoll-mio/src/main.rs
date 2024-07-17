@@ -91,13 +91,10 @@ fn main() -> Result<()> {
 
     let mut streams = vec![];
 
-    let args: Vec<String> = env::args().collect();
-    let base_url;
-    if args.len() > 1 {
-        base_url = args[1].clone();
-    } else {
-        base_url = String::from("localhost");
-    }
+    let base_url = env::args()
+        .nth(1)
+        .unwrap_or_else(|| String::from("localhost"));
+
     let addr = format!("{}:8080", &base_url);
 
     for i in 0..n_events {
