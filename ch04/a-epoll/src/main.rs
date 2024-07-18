@@ -11,6 +11,11 @@
 //! The fix for this is to account for false wakeups which is an easy fix but requires
 //! a few changes to the example. I've added an explicit comment: "FIX #4", the places
 //! I made a change so it's easy to spot the differences to the example code in the book.
+//!
+//! ## PR #19:
+//! To make this example work with Docker for Mac users there is a small change
+//! to the code where you can override "localhost" by passing in a command line
+//! argument.
 
 use std::{
     // FIX #4 (import `HashSet``)
@@ -84,6 +89,7 @@ fn main() -> Result<()> {
 
     let mut streams = vec![];
 
+    // FIX #19: Allow to override the base URL by passing it as a command line argument
     let base_url = env::args()
         .nth(1)
         .unwrap_or_else(|| String::from("localhost"));
