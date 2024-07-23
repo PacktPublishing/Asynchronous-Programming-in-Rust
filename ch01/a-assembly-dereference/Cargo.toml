@@ -1,3 +1,4 @@
+[workspace]
 [package]
 name = "ac-assembly-dereference"
 version = "0.1.0"

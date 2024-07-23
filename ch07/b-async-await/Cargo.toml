@@ -1,3 +1,4 @@
+[workspace]
 [package]
 name = "b-async-await"
 version = "0.1.0"
