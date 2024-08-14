@@ -31,13 +31,10 @@ async fn delay(path: web::Path<(u64, String)>) -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    let url;
-    if args.len() > 1 {
-        url = args[1].clone();
-    } else {
-        url = String::from("localhost");
-    }
+    let url = env::args()
+        .nth(1)
+        .unwrap_or_else(|| String::from("localhost"));
+    
     println!("{EXPLANATION}");
     HttpServer::new(|| {
         App::new()
