@@ -51,6 +51,7 @@ With the following software and hardware list you can run all code files present
 * Page 11 (Paragraph 2, line 2): **230 orders** _should be_ **175 orders**
 * Page 11 (Paragraph 2, line 3): **460 beers** _should be_ **350 beers**
 * Page 152 (Paragraph 3, line 1): **we** _should be_ **We**
+* Page 163 (Paragraph 2, line 1): **Now we have two `coroutine/wait` functions. `async_main` stores a set of coroutines created by `read_request` in a `Vec<T: Future>`.** _should be_ **Now we have two `coroutine/wait` functions. `async_main` stores a set of coroutines created by `request` in a `Vec<T: Future>`.**
 * Page 163 (Paragraph 4, line 2): **The next `coroutine/wait` function is `read_requests`** _should be_ **The next `coroutine/wait` function is `requests`**
 * Page 17 (Paragraph 3, line 2): **dye** _should be_ **die**
 
