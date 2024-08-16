@@ -1,3 +1,4 @@
+[workspace]
 [package]
 name = "a-raw-syscall"
 version = "0.1.0"
