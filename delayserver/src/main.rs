@@ -22,6 +22,7 @@ The server then delays the response for the requested time and echoes the messag
 REQUESTS:
 --------
 ";
+
 static COUNTER: AtomicUsize = AtomicUsize::new(1);
 
 #[get("/{delay}/{message}")]
