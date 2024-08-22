@@ -9,7 +9,7 @@ http://localhost:8080/[delay in ms]/[UrlEncoded message]
 If an argument is passed in when delayserver is started, that
 argument will be used as the url instead of 'localhost'
 
-On reception, it immieiately reports the following to the console:
+On reception, it immediately reports the following to the console:
 
 {Message #} - {delay in ms}: {message}
 
