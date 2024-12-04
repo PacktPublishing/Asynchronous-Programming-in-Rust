@@ -1,7 +1,6 @@
 use std::{
     thread,
-    time::Duration,
-    Instant
+    time::Duration
 };
 
 mod future;
