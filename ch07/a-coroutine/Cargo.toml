@@ -1,3 +1,4 @@
+[workspace]
 [package]
 name = "a-coroutine"
 version = "0.1.0"
