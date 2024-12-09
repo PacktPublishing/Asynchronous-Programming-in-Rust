@@ -248,7 +248,7 @@ Last we need to change our `switch()`function and update our assembly. After all
 #[naked]
 #[no_mangle]
 unsafe extern "C" fn switch() {
-    asm!(
+    naked_asm!(
         "movaps      [rcx + 0x00], xmm6",
         "movaps      [rcx + 0x10], xmm7",
         "movaps      [rcx + 0x20], xmm8",
@@ -295,7 +295,7 @@ unsafe extern "C" fn switch() {
         "mov         gs:0x08, rax",
         "mov         rax, [rdx + 0xf0]",
         "mov         gs:0x10, rax",
-        "ret", options(noreturn)
+        "ret"
     );
 }
 ```
