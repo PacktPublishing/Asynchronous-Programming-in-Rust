@@ -1,5 +1,13 @@
+/// FIX #31:
+/// Inline assembly blocks inside naked functions now need to use
+/// the `naked_asm` macro instead of the good old `asm` macro.
+/// The `noreturn` option is implicitly set by the `naked_asm`
+/// macro so there is no need to set that.
+///
+/// See: https://github.com/PacktPublishing/Asynchronous-Programming-in-Rust/issues/31
+/// for more information.
 #![feature(naked_functions)]
-use std::{arch::asm, ptr};
+use std::{arch::{asm, naked_asm}};
 
 const DEFAULT_STACK_SIZE: usize = 1024 * 1024 * 2;
 const MAX_THREADS: usize = 4;
@@ -152,8 +160,8 @@ fn call(thread: u64) {
 }
 
 #[naked]
-unsafe fn skip() {
-    asm!("ret", options(noreturn))
+unsafe extern "C" fn skip() {
+    naked_asm!("ret")
 }
 
 // this function is changed
@@ -175,8 +183,8 @@ pub fn yield_thread() {
 #[naked]
 #[no_mangle]
 #[cfg_attr(target_os = "macos", export_name = "\x01switch")]
-unsafe fn switch() {
-    asm!(
+unsafe extern "C" fn switch() {
+    naked_asm!(
         "mov 0x00[rdi], rsp",
         "mov 0x08[rdi], r15",
         "mov 0x10[rdi], r14",
@@ -192,8 +200,7 @@ unsafe fn switch() {
         "mov rbx, 0x28[rsi]",
         "mov rbp, 0x30[rsi]",
         "mov rdi, 0x38[rsi]",
-        "ret",
-        options(noreturn)
+        "ret"
     );
 }
 
