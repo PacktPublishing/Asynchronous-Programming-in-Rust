@@ -2,6 +2,10 @@
 
 <a href="https://www.packtpub.com/product/asynchronous-programming-in-rust/9781805128137"><img src="https://content.packt.com/B20892/cover_image_small.jpg" alt="no-image" height="256px" align="right"></a>
 
+> [!NOTE]
+> This branch is for the second edition of the book and will at times differ
+> significantly from the main branch. Future work will happen in this branch until it replaces the main branch at the release of the second edition.
+
 This is the code repository for [Asynchronous Programming in Rust](https://www.packtpub.com/product/asynchronous-programming-in-rust/9781805128137), published by Packt.
 
 **Learn asynchronous programming by building working examples of futures, green threads, and runtimes**
