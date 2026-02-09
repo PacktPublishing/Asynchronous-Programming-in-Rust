@@ -1,13 +1,3 @@
-//! # FIXES:
-//! The number is identical to the number in the GitHub issue tracker
-//!
-//! ## FIX ISSUE #11:
-//! See:https://github.com/PacktPublishing/Asynchronous-Programming-in-Rust/issues/11
-//! The book didn't make it clear that this example will only work on `x86-64` architecture,
-//! so users on newer M-series macs (which uses the ARM64 instruction set), will get a
-//! compilation error. This is solved by conditionally compiling a version that works
-//! with the  ARM64 instruction set.
-
 use std::arch::asm;
 
 fn main() {
@@ -29,7 +19,6 @@ fn dereference(ptr: *const usize) -> usize {
     res
 }
 
-// FIX #11
 #[cfg(target_arch = "aarch64")]
 fn dereference(ptr: *const usize) -> usize {
     let mut res: usize;
