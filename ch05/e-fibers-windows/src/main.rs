@@ -1,12 +1,4 @@
-/// FIX #31:
-/// Inline assembly blocks inside naked functions now need to use
-/// the `naked_asm` macro instead of the good old `asm` macro.
-/// The `noreturn` option is implicitly set by the `naked_asm`
-/// macro so there is no need to set that.
-///
-/// See: https://github.com/PacktPublishing/Asynchronous-Programming-in-Rust/issues/31
-/// for more information.
-#![feature(naked_functions)]
+
 use std::arch::{asm, naked_asm};
 
 const DEFAULT_STACK_SIZE: usize = 1024 * 1024 * 2;
@@ -26,7 +18,6 @@ enum State {
 }
 
 struct Thread {
-    id: usize,
     stack: Vec<u8>,
     ctx: ThreadContext,
     state: State,
@@ -46,9 +37,8 @@ struct ThreadContext {
 }
 
 impl Thread {
-    fn new(id: usize) -> Self {
+    fn new() -> Self {
         Thread {
-            id,
             stack: vec![0_u8; DEFAULT_STACK_SIZE],
             ctx: ThreadContext::default(),
             state: State::Available,
@@ -59,14 +49,13 @@ impl Thread {
 impl Runtime {
     pub fn new() -> Self {
         let base_thread = Thread {
-            id: 0,
             stack: vec![0_u8; DEFAULT_STACK_SIZE],
             ctx: ThreadContext::default(),
             state: State::Running,
         };
 
         let mut threads = vec![base_thread];
-        let mut available_threads: Vec<Thread> = (1..MAX_THREADS).map(|i| Thread::new(i)).collect();
+        let mut available_threads: Vec<Thread> = (1..MAX_THREADS).map(|_| Thread::new()).collect();
         threads.append(&mut available_threads);
 
         Runtime {
@@ -142,16 +131,16 @@ impl Runtime {
         unsafe {
             let s_ptr = available.stack.as_mut_ptr().offset(size as isize);
             let s_ptr = (s_ptr as usize & !15) as *mut u8;
-            std::ptr::write(s_ptr.offset(-16) as *mut u64, guard as u64);
-            std::ptr::write(s_ptr.offset(-24) as *mut u64, skip as u64);
-            std::ptr::write(s_ptr.offset(-32) as *mut u64, f as u64);
+            std::ptr::write(s_ptr.offset(-16) as *mut u64, guard as *const() as u64);
+            std::ptr::write(s_ptr.offset(-24) as *mut u64, skip as *const() as u64);
+            std::ptr::write(s_ptr.offset(-32) as *mut u64, f as *const() as u64);
             available.ctx.rsp = s_ptr.offset(-32) as u64;
         }
         available.state = State::Ready;
     }
 }
 
-#[naked]
+#[unsafe(naked)]
 unsafe extern "C" fn skip() {
     naked_asm!("ret")
 }
@@ -172,7 +161,7 @@ pub fn yield_thread() {
 }
 
 #[cfg(not(target_os = "windows"))]
-#[naked]
+#[unsafe(naked)]
 #[no_mangle]
 #[cfg_attr(target_os = "macos", export_name = "\x01switch")]
 unsafe extern "C" fn switch() {
@@ -262,9 +251,9 @@ impl Runtime {
         unsafe {
             let s_ptr = available.stack.as_mut_ptr().offset(size as isize);
             let s_ptr = (s_ptr as usize & !15) as *mut u8;
-            std::ptr::write(s_ptr.offset(-16) as *mut u64, guard as u64);
-            std::ptr::write(s_ptr.offset(-24) as *mut u64, skip as u64);
-            std::ptr::write(s_ptr.offset(-32) as *mut u64, f as u64);
+            std::ptr::write(s_ptr.offset(-16) as *mut u64, guard as *const() as u64);
+            std::ptr::write(s_ptr.offset(-24) as *mut u64, skip as *const() as u64);
+            std::ptr::write(s_ptr.offset(-32) as *mut u64, f as *const() as u64);
             available.ctx.rsp = s_ptr.offset(-32) as u64;
             available.ctx.stack_start = s_ptr as u64;
             available.ctx.stack_end = available.stack.as_ptr() as u64;
@@ -278,10 +267,10 @@ impl Runtime {
 // reference: https://probablydance.com/2013/02/20/handmade-coroutines-for-windows/
 // Contents of TIB on Windows: https://en.wikipedia.org/wiki/Win32_Thread_Information_Block
 #[cfg(target_os = "windows")]
-#[naked]
+#[unsafe(naked)]
 #[no_mangle]
 unsafe extern "C" fn switch() {
-    asm!(
+    naked_asm!(
         "movaps      [rcx + 0x00], xmm6",
         "movaps      [rcx + 0x10], xmm7",
         "movaps      [rcx + 0x20], xmm8",
@@ -328,6 +317,6 @@ unsafe extern "C" fn switch() {
         "mov         gs:0x08, rax",
         "mov         rax, [rdx + 0xf0]",
         "mov         gs:0x10, rax",
-        "ret", options(noreturn)
+        "ret"
     );
 }

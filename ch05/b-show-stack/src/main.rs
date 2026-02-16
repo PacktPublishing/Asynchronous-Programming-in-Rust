@@ -28,7 +28,7 @@ fn main() {
     unsafe {
         let stack_bottom = stack.as_mut_ptr().offset(SSIZE);
         let sb_aligned = (stack_bottom as usize & !15) as *mut u8;
-        std::ptr::write(sb_aligned.offset(-16) as *mut u64, hello as u64);
+        std::ptr::write(sb_aligned.offset(-16) as *mut u64, hello as *const() as u64);
         ctx.rsp = sb_aligned.offset(-16) as u64;
 
         for i in 0..SSIZE {

@@ -1,12 +1,3 @@
-/// FIX #31:
-/// Inline assembly blocks inside naked functions now need to use
-/// the `naked_asm` macro instead of the good old `asm` macro.
-/// The `noreturn` option is implicitly set by the `naked_asm`
-/// macro so there is no need to set that.
-///
-/// See: https://github.com/PacktPublishing/Asynchronous-Programming-in-Rust/issues/31
-/// for more information.
-#![feature(naked_functions)]
 use std::{arch::{asm, naked_asm}};
 
 const DEFAULT_STACK_SIZE: usize = 1024 * 1024 * 2;
@@ -142,9 +133,9 @@ impl Runtime {
             let s_ptr = (s_ptr as usize & !15) as *mut u8;
             available.task = Some(Box::new(f));
             available.ctx.thread_ptr = available as *const Thread as u64;
-            std::ptr::write(s_ptr.offset(-16) as *mut u64, guard as u64);
-            std::ptr::write(s_ptr.offset(-24) as *mut u64, skip as u64);
-            std::ptr::write(s_ptr.offset(-32) as *mut u64, call as u64); // changed
+            std::ptr::write(s_ptr.offset(-16) as *mut u64, guard as *const() as u64);
+            std::ptr::write(s_ptr.offset(-24) as *mut u64, skip as *const() as u64);
+            std::ptr::write(s_ptr.offset(-32) as *mut u64, call as *const() as u64); // changed
             available.ctx.rsp = s_ptr.offset(-32) as u64;
             available.state = State::Ready;
         }
@@ -159,7 +150,7 @@ fn call(thread: u64) {
     }
 }
 
-#[naked]
+#[unsafe(naked)]
 unsafe extern "C" fn skip() {
     naked_asm!("ret")
 }
@@ -180,7 +171,7 @@ pub fn yield_thread() {
         (*rt_ptr).t_yield();
     };
 }
-#[naked]
+#[unsafe(naked)]
 #[no_mangle]
 #[cfg_attr(target_os = "macos", export_name = "\x01switch")]
 unsafe extern "C" fn switch() {
