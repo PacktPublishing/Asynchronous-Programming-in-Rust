@@ -3,15 +3,12 @@ services:
     build: ../../delayserver/
     ports:
       - "8080:8080"
-    networks:
-      - delayserver_network
+    command: ["cargo", "run", "--", "0.0.0.0"]
 
-  epoll-mio:
+  epoll:
     build: .
     depends_on:
       - delayserver
-    networks:
-      - delayserver_network
-
-networks:
-  delayserver_network: {}
+    command: >
+        sh -c "echo 'Waiting for delayserver...' && sleep 2 && cargo run --release"
+    network_mode: "service:delayserver"
