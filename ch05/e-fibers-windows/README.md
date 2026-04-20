@@ -13,8 +13,9 @@ AMD desktop CPU's use this architecture).
 
 ## Running the example
 
-This example uses the unstable feature "naked_functions" so we need to run it
-using nightly Rust. There are two ways to do that.
+This example uses the feature "naked_functions" so we need to run it using
+nightly Rust until https://github.com/rust-lang/rust/pull/134213 is released in
+stable Rust. There are two ways to do that.
 
 1. Tell cargo to use the nightly toolchain when you run the program:
 

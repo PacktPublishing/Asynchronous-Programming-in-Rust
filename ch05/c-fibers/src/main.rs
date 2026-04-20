@@ -203,11 +203,16 @@ fn main() {
     runtime.spawn(|| {
         println!("THREAD 2 STARTING");
         let id = 2;
-        for i in 0..15 {
+        for i in 0..7 {
+            println!("thread: {} counter: {}", id, i);
+        }
+        yield_thread();
+        for i in 7..15 {
             println!("thread: {} counter: {}", id, i);
             yield_thread();
         }
         println!("THREAD 2 FINISHED");
     });
+
     runtime.run();
 }

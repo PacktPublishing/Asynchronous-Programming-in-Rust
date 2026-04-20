@@ -6,7 +6,6 @@
 ///
 /// See: https://github.com/PacktPublishing/Asynchronous-Programming-in-Rust/issues/31
 /// for more information.
-#![feature(naked_functions)]
 use std::arch::{asm, naked_asm};
 
 const DEFAULT_STACK_SIZE: usize = 1024 * 1024 * 2;
@@ -151,7 +150,7 @@ impl Runtime {
     }
 }
 
-#[naked]
+#[unsafe(naked)]
 unsafe extern "C" fn skip() {
     naked_asm!("ret")
 }
@@ -172,7 +171,7 @@ pub fn yield_thread() {
 }
 
 #[cfg(not(target_os = "windows"))]
-#[naked]
+#[unsafe(naked)]
 #[no_mangle]
 #[cfg_attr(target_os = "macos", export_name = "\x01switch")]
 unsafe extern "C" fn switch() {
@@ -278,7 +277,7 @@ impl Runtime {
 // reference: https://probablydance.com/2013/02/20/handmade-coroutines-for-windows/
 // Contents of TIB on Windows: https://en.wikipedia.org/wiki/Win32_Thread_Information_Block
 #[cfg(target_os = "windows")]
-#[naked]
+#[unsafe(naked)]
 #[no_mangle]
 unsafe extern "C" fn switch() {
     asm!(

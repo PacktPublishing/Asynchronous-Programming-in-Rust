@@ -6,7 +6,6 @@
 ///
 /// See: https://github.com/PacktPublishing/Asynchronous-Programming-in-Rust/issues/31
 /// for more information.
-#![feature(naked_functions)]
 use std::{arch::{asm, naked_asm}};
 
 const DEFAULT_STACK_SIZE: usize = 1024 * 1024 * 2;
@@ -159,7 +158,7 @@ fn call(thread: u64) {
     }
 }
 
-#[naked]
+#[unsafe(naked)]
 unsafe extern "C" fn skip() {
     naked_asm!("ret")
 }
@@ -180,7 +179,7 @@ pub fn yield_thread() {
         (*rt_ptr).t_yield();
     };
 }
-#[naked]
+#[unsafe(naked)]
 #[no_mangle]
 #[cfg_attr(target_os = "macos", export_name = "\x01switch")]
 unsafe extern "C" fn switch() {
