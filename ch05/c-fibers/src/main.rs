@@ -99,7 +99,7 @@ impl Runtime {
         let mut pos = self.current;
         while self.threads[pos].state != State::Ready {
             pos += 1;
-            if pos == self.threads.len() {
+            if (pos + 1) == self.threads.len() {
                 pos = 0;
             }
             if pos == self.current {
