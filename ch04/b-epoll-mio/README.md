@@ -6,7 +6,7 @@ mio you only need to make a few very minor changes to get it working which I've
 commented and marked out as clearly as I can.
 
 If running on a Mac system (which only supports kqueue but not epoll), docker
-can be used to run the example by running the epoll_mio_docker.sh script
+can be used to run the example by running the `epoll_mio_docker.sh` script
 
 You can run the example by simply writing `cargo run`
 
