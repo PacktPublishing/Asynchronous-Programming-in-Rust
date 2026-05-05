@@ -13,9 +13,7 @@
 //! Change `base_url = String::from("localhost");` to `base_url = String::from("127.0.0.1");`.
 //!
 
-// FIX #4 (import `HashSet``)
 use std::collections::HashSet;
-use std::env;
 use std::io::{self, Read, Result, Write};
 
 use mio::event::Event;
@@ -69,13 +67,7 @@ fn main() -> Result<()> {
     let n_events = 5;
 
     let mut streams = vec![];
-
-    // Allow to override the base URL by passing it as a command line argument
-    let base_url = env::args()
-        .nth(1)
-        .unwrap_or_else(|| String::from("localhost"));
-
-    let addr = format!("{}:8080", &base_url);
+    let addr = "localhost:8080";
 
     for i in 0..n_events {
         let delay = (n_events - i) * 1000;
