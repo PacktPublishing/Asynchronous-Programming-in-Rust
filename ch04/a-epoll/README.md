@@ -6,7 +6,7 @@ additional comments that's not in the book.
 You can run the example by simply writing `cargo run`
 
 If running on a Mac system (which only supports kqueue but not epoll), docker
-can be used to run the example by running the epoll_docker.sh script
+can be used to run the example by running the `epoll_docker.sh` script
 
 ## Note
 
