@@ -5,10 +5,7 @@
 
 use ffi::Event;
 use poll::{Poll, Registry};
-use std::{
-    io::{self, Read, Result, Write},
-    net::TcpStream,
-};
+use std::{io::{self, Read, Result, Write}, net::TcpStream};
 
 mod ffi;
 mod poll;
@@ -45,7 +42,7 @@ fn handle_events(events: &[Event], streams: &mut [TcpStream], registry: &Registr
                     println!("{txt}\n------\n");
                 }
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock => break,
-                Err(e) if e.kind() == io::ErrorKind::Interrupted => break,
+                Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
                 Err(e) => return Err(e),
             }
         }

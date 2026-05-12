@@ -14,7 +14,6 @@
 //!
 
 use std::io::{self, Read, Result, Write};
-
 use mio::event::Event;
 use mio::net::TcpStream;
 use mio::{Interest, Poll, Token, Registry};
@@ -51,7 +50,7 @@ fn handle_events(events: &[Event], streams: &mut [TcpStream], registry: &Registr
                     println!("{txt}\n------\n");
                 }
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock => break,
-                Err(e) if e.kind() == io::ErrorKind::Interrupted => break,
+                Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
                 Err(e) => return Err(e),
             }
         }

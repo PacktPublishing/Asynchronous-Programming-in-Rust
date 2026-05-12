@@ -1,9 +1,4 @@
-use std::{
-    io::{self, Result},
-    net::TcpStream,
-    os::fd::AsRawFd,
-    ptr,
-};
+use std::{io::{self, Result}, net::TcpStream, os::fd::AsRawFd, ptr};
 
 use crate::ffi;
 
