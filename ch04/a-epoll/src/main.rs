@@ -3,14 +3,12 @@
 //! to the code where you can override "localhost" by passing in a command line
 //! argument.
 
-use std::{
-    collections::HashSet,
-    io::{self, Read, Result, Write},
-    net::TcpStream
-};
-
 use ffi::Event;
-use poll::Poll;
+use poll::{Poll, Registry};
+use std::{
+    io::{self, Read, Result, Write},
+    net::TcpStream,
+};
 
 mod ffi;
 mod poll;
@@ -26,22 +24,17 @@ fn get_req(path: &str) -> String {
     )
 }
 
-fn handle_events(
-    events: &[Event],
-    streams: &mut [TcpStream],
-    handled: &mut HashSet<usize>,
-) -> Result<usize> {
+fn handle_events(events: &[Event], streams: &mut [TcpStream], registry: &Registry) -> Result<u64> {
     let mut handled_events = 0;
     for event in events {
-        let index = event.token();
+        let index = event.token() as usize;
         let mut data = vec![0u8; 4096];
 
         loop {
-            match streams[index].read(&mut data) {
-                Ok(n) if n == 0 => {
-                    if !handled.insert(index) {
-                        break;
-                    }
+            let stream = &mut streams[index];
+            match stream.read(&mut data) {
+                Ok(0) => {
+                    registry.deregister(stream)?;
                     handled_events += 1;
                     break;
                 }
@@ -77,14 +70,10 @@ fn main() -> Result<()> {
 
         stream.write_all(request.as_bytes())?;
         // NB! Token is equal to index in Vec
-        poll.registry()
-            .register(&stream, i, ffi::EPOLLIN | ffi::EPOLLET)?;
+        poll.registry().register(&stream, i, ffi::EPOLLIN | ffi::EPOLLET)?;
 
         streams.push(stream);
     }
-
-    // FIX #4: store the handled IDs
-    let mut handled_ids = HashSet::new();
 
     let mut handled_events = 0;
     while handled_events < n_events {
@@ -95,7 +84,8 @@ fn main() -> Result<()> {
             println!("TIMEOUT (OR SPURIOUS EVENT NOTIFICATION)");
             continue;
         }
-        handled_events += handle_events(&events, &mut streams, &mut handled_ids)?;
+        let registry = poll.registry();
+        handled_events += handle_events(&events, &mut streams, &registry)?;
     }
 
     println!("FINISHED");

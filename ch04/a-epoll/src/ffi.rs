@@ -1,4 +1,5 @@
 pub const EPOLL_CTL_ADD: i32 = 1;
+pub const EPOLL_CTL_DEL: i32 = 2;
 pub const EPOLLIN: i32 = 0x1;
 pub const EPOLLET: i32 = 1 << 31;
 
@@ -19,11 +20,11 @@ extern "C" {
 pub struct Event {
     pub(crate) events: u32,
     // Token to identify event
-    pub(crate) epoll_data: usize,
+    pub(crate) epoll_data: u64,
 }
 
 impl Event {
-    pub fn token(&self) -> usize {
+    pub fn token(&self) -> u64 {
         self.epoll_data
     }
 }

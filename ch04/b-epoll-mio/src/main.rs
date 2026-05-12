@@ -13,12 +13,11 @@
 //! Change `base_url = String::from("localhost");` to `base_url = String::from("127.0.0.1");`.
 //!
 
-use std::collections::HashSet;
 use std::io::{self, Read, Result, Write};
 
 use mio::event::Event;
 use mio::net::TcpStream;
-use mio::{Interest, Poll, Token};
+use mio::{Interest, Poll, Token, Registry};
 
 fn get_req(path: &str) -> String {
     format!(
@@ -29,7 +28,7 @@ fn get_req(path: &str) -> String {
     )
 }
 
-fn handle_events(events: &[Event], streams: &mut [TcpStream], handled: &mut HashSet<usize>) -> Result<usize> {
+fn handle_events(events: &[Event], streams: &mut [TcpStream], registry: &Registry) -> Result<usize> {
     let mut handled_events = 0;
     for event in events {
         // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -38,11 +37,10 @@ fn handle_events(events: &[Event], streams: &mut [TcpStream], handled: &mut Hash
         // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         let mut data = vec![0u8; 4096];
         loop {
-            match streams[index].read(&mut data) {
+            let stream = &mut streams[index];
+            match stream.read(&mut data) {
                 Ok(n) if n == 0 => {
-                    if !handled.insert(index) {
-                        break;
-                    }
+                    registry.deregister(stream)?;
                     handled_events += 1;
                     break;
                 }
@@ -94,9 +92,6 @@ fn main() -> Result<()> {
         streams.push(stream);
     }
 
-    // FIX #4: store the handled IDs
-    let mut handled_ids = HashSet::new();
-
     let mut handled_events = 0;
     while handled_events < n_events {
         // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -115,8 +110,8 @@ fn main() -> Result<()> {
         // Events collection
         let events: Vec<Event> = events.into_iter().map(|e| e.clone()).collect();
         // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-        handled_events += handle_events(&events, &mut streams, &mut handled_ids)?;
+        let registry = poll.registry();
+        handled_events += handle_events(&events, &mut streams, &registry)?;
     }
 
     println!("FINISHED");

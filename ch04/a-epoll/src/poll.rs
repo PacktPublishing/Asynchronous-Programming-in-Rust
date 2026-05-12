@@ -2,6 +2,7 @@ use std::{
     io::{self, Result},
     net::TcpStream,
     os::fd::AsRawFd,
+    ptr,
 };
 
 use crate::ffi;
@@ -57,7 +58,7 @@ pub struct Registry {
 
 impl Registry {
     // NB! Mio inverts this, and `source` owns the register implementation
-    pub fn register(&self, source: &TcpStream, token: usize, interests: i32) -> Result<()> {
+    pub fn register(&self, source: &TcpStream, token: u64, interests: i32) -> Result<()> {
         let mut event = ffi::Event {
             events: interests as u32,
             epoll_data: token,
@@ -66,6 +67,17 @@ impl Registry {
         let op = ffi::EPOLL_CTL_ADD;
         let res = unsafe { ffi::epoll_ctl(self.raw_fd, op, source.as_raw_fd(), &mut event) };
 
+        if res < 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(())
+    }
+    
+    pub fn deregister(&self, source: &TcpStream) -> Result<()> {
+        let op = ffi::EPOLL_CTL_DEL;
+        let res = unsafe {
+            ffi::epoll_ctl(self.raw_fd, op, source.as_raw_fd(), ptr::null_mut())
+            };
         if res < 0 {
             return Err(io::Error::last_os_error());
         }
