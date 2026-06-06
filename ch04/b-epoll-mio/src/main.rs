@@ -65,10 +65,9 @@ fn handle_events(events: &[Event], streams: &mut [TcpStream], handled: &mut Hash
                 Ok(n) if n == 0 => {
                     // FIX #4
                     // `insert` returns false if the value already existed in the set.
-                    if !handled.insert(index) {
-                        break;
+                    if handled.insert(index) {
+                        handled_events += 1;
                     }
-                    handled_events += 1;
                     break;
                 }
                 Ok(n) => {
@@ -147,7 +146,7 @@ fn main() -> Result<()> {
         // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         // To make minimal changes to the existing code we create a Vec<Event> from mio's
         // Events collection
-        let events: Vec<Event> = events.into_iter().map(|e| e.clone()).collect();
+        let events: Vec<Event> = events.into_iter().cloned().collect();
         // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
         // ------------------------------------------------------⌄ FIX #4 (new signature)
