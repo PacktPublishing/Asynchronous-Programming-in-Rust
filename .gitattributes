@@ -1,0 +1,12 @@
+# Automatically normalize text files
+* text=auto
+
+# Use LF for source code and documentation
+*.rs   text eol=lf
+*.toml text eol=lf
+*.md   text eol=lf
+*.sh   text eol=lf
+
+# Windows batch scripts use CRLF
+*.bat  text eol=crlf
+*.cmd  text eol=crlf

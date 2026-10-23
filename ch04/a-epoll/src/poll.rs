@@ -67,7 +67,7 @@ impl Registry {
         }
         Ok(())
     }
-    
+
     pub fn deregister(&self, source: &TcpStream) -> Result<()> {
         let op = ffi::EPOLL_CTL_DEL;
         let res = unsafe {
