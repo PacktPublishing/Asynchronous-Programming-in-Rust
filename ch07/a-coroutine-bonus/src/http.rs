@@ -15,7 +15,7 @@ fn get_req(path: &str) -> String {
 pub struct Http;
 
 impl Http {
-    pub fn get(path: &'static str) -> impl Future<Output = String> {
+    pub fn get(path: &'static str) -> impl Future<Output = String> + use<> {
         HttpGetFuture::new(path)
     }
 }
