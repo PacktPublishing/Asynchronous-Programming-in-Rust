@@ -172,7 +172,7 @@ pub fn yield_thread() {
     };
 }
 #[unsafe(naked)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[cfg_attr(target_os = "macos", export_name = "\x01switch")]
 unsafe extern "C" fn switch() {
     naked_asm!(

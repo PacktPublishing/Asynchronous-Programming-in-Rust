@@ -12,7 +12,7 @@ fn main() {
 
 #[cfg(target_family = "unix")]
 #[link(name = "c")]
-extern "C" {
+unsafe extern "C" {
     fn write(fd: u32, buf: *const u8, count: usize) -> i32;
 }
 

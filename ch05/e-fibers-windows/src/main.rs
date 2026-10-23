@@ -115,7 +115,7 @@ impl Runtime {
             }
         }
 
-        // preventing compiler optimizing our code away on windows. Will never be reached anyway.
+        // // Prevent the compiler from optimizing away code on Windows.
         self.threads.len() > 0
     }
 
@@ -140,6 +140,8 @@ impl Runtime {
     }
 }
 
+
+#[cfg(not(target_os = "windows"))]
 #[unsafe(naked)]
 unsafe extern "C" fn skip() {
     naked_asm!("ret")
@@ -162,7 +164,7 @@ pub fn yield_thread() {
 
 #[cfg(not(target_os = "windows"))]
 #[unsafe(naked)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[cfg_attr(target_os = "macos", export_name = "\x01switch")]
 unsafe extern "C" fn switch() {
     naked_asm!(
@@ -209,9 +211,10 @@ pub fn main() {
 }
 
 // ===== WINDOWS SUPPORT =====
+// See README.md for detailed explanation of the changes we need to make
 #[cfg(target_os = "windows")]
 #[derive(Debug, Default)]
-#[repr(C)]
+#[repr(C, align(16))]
 struct ThreadContext {
     xmm6: [u64; 2],
     xmm7: [u64; 2],
@@ -251,10 +254,10 @@ impl Runtime {
         unsafe {
             let s_ptr = available.stack.as_mut_ptr().offset(size as isize);
             let s_ptr = (s_ptr as usize & !15) as *mut u8;
-            std::ptr::write(s_ptr.offset(-16) as *mut u64, guard as *const() as u64);
-            std::ptr::write(s_ptr.offset(-24) as *mut u64, skip as *const() as u64);
-            std::ptr::write(s_ptr.offset(-32) as *mut u64, f as *const() as u64);
-            available.ctx.rsp = s_ptr.offset(-32) as u64;
+             std::ptr::write(s_ptr.offset(-64) as *mut u64, guard as *const () as u64);
+            std::ptr::write(s_ptr.offset(-104) as *mut u64, skip as *const () as u64);
+            std::ptr::write(s_ptr.offset(-112) as *mut u64, f as *const () as u64);
+            available.ctx.rsp = s_ptr.offset(-112) as u64;
             available.ctx.stack_start = s_ptr as u64;
             available.ctx.stack_end = available.stack.as_ptr() as u64;
         }
@@ -264,11 +267,20 @@ impl Runtime {
     }
 }
 
+#[cfg(target_os = "windows")]
+#[unsafe(naked)]
+unsafe extern "C" fn skip() {
+    naked_asm!(
+        "add rsp, 32",
+        "ret"
+    )
+}
+
 // reference: https://probablydance.com/2013/02/20/handmade-coroutines-for-windows/
 // Contents of TIB on Windows: https://en.wikipedia.org/wiki/Win32_Thread_Information_Block
 #[cfg(target_os = "windows")]
 #[unsafe(naked)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn switch() {
     naked_asm!(
         "movaps      [rcx + 0x00], xmm6",

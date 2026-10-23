@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 820" role="img" aria-labelledby="title desc">
+<title id="title">Initial Windows x64 fiber stack layout</title>
+<desc id="desc">Starting at the aligned stack top S, the initial stack stores the address of f at S minus 112, skip at S minus 104, thirty-two bytes of shadow space for f, guard at S minus 64, an unused return-address slot, and thirty-two bytes of shadow space for guard. The stack grows toward lower addresses.</desc>
+<rect width="1120" height="820" fill="#ffffff"/>
+<style>
+ .head{font:700 29px system-ui,Segoe UI,sans-serif;fill:#18263a}
+ .subtitle{font:17px system-ui,Segoe UI,sans-serif;fill:#546579}
+ .address{font:600 17px ui-monospace,SFMono-Regular,Consolas,monospace;fill:#34465e;text-anchor:end}
+ .cell{font:600 19px system-ui,Segoe UI,sans-serif;fill:#192b42}
+ .subcell{font:15px system-ui,Segoe UI,sans-serif;fill:#546579}
+ .annotation{font:17px system-ui,Segoe UI,sans-serif;fill:#34465e}
+ .small{font:15px system-ui,Segoe UI,sans-serif;fill:#617189}
+</style>
+<text x="52" y="54" class="head">Windows x64: initial fiber stack</text>
+<text x="52" y="85" class="subtitle">S is the aligned stack top (s_ptr). Addresses increase upward; the stack grows downward.</text>
+<text x="303" y="125" class="small" text-anchor="end">Offset from S</text>
+<text x="348" y="125" class="small">Contents (higher addresses at the top)</text>
+<!-- rows with exact byte ranges -->
+<g>
+ <rect x="324" y="140" width="538" height="53" rx="7" fill="#F1F4F8" stroke="#CAD4E0"/>
+ <text x="305" y="171" class="address">-16…-1</text><text x="346" y="171" class="cell">Unused space above the frame</text>
+ <rect x="324" y="196" width="538" height="99" rx="7" fill="#E7F4FF" stroke="#8BBDE9"/>
+ <text x="305" y="247" class="address">-48…-17</text><text x="346" y="237" class="cell">32 bytes — shadow space for guard</text>
+ <text x="346" y="264" class="subcell">Available for guard to use</text>
+ <rect x="324" y="298" width="538" height="53" rx="7" fill="#F1F4F8" stroke="#CAD4E0"/>
+ <text x="305" y="329" class="address">-56…-49</text><text x="346" y="329" class="cell">Unused return-address slot for guard</text>
+ <rect x="324" y="354" width="538" height="57" rx="7" fill="#C8E5C8" stroke="#69A96B"/>
+ <text x="305" y="387" class="address">-64…-57</text><text x="346" y="387" class="cell">Address of guard</text>
+ <rect x="324" y="414" width="538" height="99" rx="7" fill="#E7F4FF" stroke="#8BBDE9"/>
+ <text x="305" y="463" class="address">-96…-65</text><text x="346" y="453" class="cell">32 bytes — shadow space for f</text>
+ <text x="346" y="481" class="subcell">skip advances rsp across this space</text>
+ <rect x="324" y="516" width="538" height="57" rx="7" fill="#FBE5C9" stroke="#E8B26C"/>
+ <text x="305" y="549" class="address">-104…-97</text><text x="346" y="549" class="cell">Address of skip</text>
+ <rect x="324" y="576" width="538" height="57" rx="7" fill="#BDD3F4" stroke="#7B9ED5"/>
+ <text x="305" y="609" class="address">-112…-105</text><text x="346" y="609" class="cell">Address of f</text>
+ <rect x="324" y="636" width="538" height="56" rx="7" fill="#F1F4F8" stroke="#CAD4E0" stroke-dasharray="7 5"/>
+ <text x="305" y="667" class="address">below -112</text><text x="346" y="667" class="cell">Space for f’s growing stack</text>
+</g>
+<!-- annotations -->
+<path d="M 877 604 L 918 604" stroke="#496da4" stroke-width="2"/>
+<text x="927" y="596" class="annotation">Initial rsp</text>
+<text x="927" y="618" class="small">switch ret → f</text>
+<path d="M 877 546 L 918 546" stroke="#b97c24" stroke-width="2"/>
+<text x="927" y="534" class="annotation">f returns</text>
+<text x="927" y="557" class="small">ret → skip</text>
+<path d="M 877 383 L 918 383" stroke="#487b49" stroke-width="2"/>
+<text x="927" y="373" class="annotation">skip does</text>
+<text x="927" y="395" class="small">add rsp, 32; ret</text>
+<path d="M 887 182 L 887 661" fill="none" stroke="#94A3B8" stroke-width="2" stroke-dasharray="3 9" opacity=".4"/>
+<path d="M 83 185 L 83 657" stroke="#7C91A8" stroke-width="4"/>
+<path d="M 72 638 L 83 660 L 94 638" fill="none" stroke="#7C91A8" stroke-width="4" stroke-linecap="round"/>
+<text x="52" y="428" transform="rotate(-90 52 428)" class="annotation">Stack grows downward</text>
+<line x1="52" y1="727" x2="1068" y2="727" stroke="#D1D9E3"/>
+<text x="52" y="758" class="annotation">The synthetic return addresses are separated to provide the shadow space required by Windows x64.</text>
+<text x="52" y="787" class="small">The naked skip function is special: it adjusts rsp before returning to guard.</text>
+</svg>

@@ -14,11 +14,13 @@ fn hello() -> ! {
 }
 
 unsafe fn gt_switch(new: *const ThreadContext) {
-    asm!(
+    unsafe {
+        asm!(
         "mov rsp, [{0} + 0x00]",
         "ret",
         in(reg) new,
-    );
+        );
+    }
 }
 
 fn main() {

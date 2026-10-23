@@ -1,85 +1,119 @@
 # e-fibers-windows
 
-This is a version of the first example we presented in the
-book, but with the addition of a fully working stack-swap
-on Windows. This version will compile the correct code
-so you can run the example both on Unix-based systems an
-on Windows.
+This is a version of the fibers example presented in the book, but with the
+additional code needed to switch stacks on Windows. The same example can run on
+x86-64 Linux, macOS, and Windows, although the Windows implementation needs a
+little more work to satisfy its calling convention.
 
 ## Technical requirements
 
-Unix or Linux running a x86-64 CPU (most modern Intel and
-AMD desktop CPU's use this architecture).
+An x86-64 CPU running Linux, Windows, or an x86-64 version of macOS. This
+example does not support Arm-based Macs or other CPU architectures.
 
 ## Running the example
 
-This example uses the unstable feature "naked_functions" so we need to run it
-using nightly Rust. There are two ways to do that.
+The `#[unsafe(naked)]` attribute and `naked_asm!` macro were stabilized in
+Rust 1.88, so **Rust 1.88 or newer** is sufficient. You can run the example
+with:
 
-1. Tell cargo to use the nightly toolchain when you run the program:
-
-```
-cargo +nightly run
-```
-
-2. Override the default toolchain for this directory:
-
-```
-rustup override set nightly
+```console
 cargo run
 ```
 
+If you are using an older Rust toolchain for the original book examples, update
+it with `rustup update stable` before running this version.
+
 ## Safety
 
-Needless to say, the same disclaimer regarding safety as we made for the example
-"c-fibers" still apply.
+The same disclaimer regarding safety as we made for the `c-fibers` example
+still applies. We manually manage stacks and context switches here, which is
+not something Rust can make safe for us. This is an educational example, not a
+production-ready fiber implementation. In particular, using a `Vec<u8>` as a
+Windows stack does not reproduce all the stack guard, stack probing, and
+exception-unwinding facilities of a Windows-managed stack.
 
+## Detailed explanation of the changes made to support Windows
 
-## Detailed explanation on the changes made to support Windows
+Our example works on x86-64 Linux, macOS, and Windows. Unfortunately, newer
+Macs with Apple's M-series chips use a different architecture, so this example
+does not work on those machines without further changes.
 
-Our example works for both OSX, Linux and Windows as long as the platform is running on a x86-64 architecture (unfortunately, this isn't the case anymore for newer Macs using the M-series chips).
+You might wonder why I didn't include Windows support in the original example.
+The reason is that most of these platform-specific details aren't particularly
+relevant for understanding the main concepts of how fibers work.
 
-You might wonder why I didn't include this in the original example, and the reason for that is that this is really not at all that relevant for explaining the main concepts of how fibers work.
+Here we'll go a bit further to explore how to set up a stack for Windows and
+perform a context switch. We might not get all the way to a perfect
+implementation, but there are plenty of references to explore further:
 
-Here I'm trying to go a bit further here to explore how we should set up the stack for Windows correct way and do a proper context switch. Even though we might not get all the way to a perfect implementation, there is plenty of information and references for you to explore further and I'll list some of them here:
+- [Microsoft's x64 calling convention](https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention)
+- [Microsoft's x64 stack usage](https://learn.microsoft.com/en-us/cpp/build/stack-usage)
+- [Win64/AMD64 API](https://wiki.lazarus.freepascal.org/Win64/AMD64_API) — a useful summary of the differences between System V and Windows x64
+- [Handmade Coroutines for Windows](https://probablydance.com/2013/02/20/handmade-coroutines-for-windows/) — a very good read about a coroutine implementation
+- [Boost.Context assembly](https://github.com/boostorg/context/blob/develop/src/asm/ontop_x86_64_ms_pe_gas.asm) — another useful reference for further study
 
-* [Microsofts x64 software conventions](https://docs.microsoft.com/en-us/cpp/build/x64-software-conventions?view=vs-2019)
-* [Win64/AMD64 API](https://wiki.lazarus.freepascal.org/Win64/AMD64\_API) - nice summary of differences between psABi and Win64
-* [Handmade Coroutines for Windows](https://probablydance.com/2013/02/20/handmade-coroutines-for-windows/) - a very good read about a coroutine implementation
-* [Boost Context assembly](https://github.com/boostorg/context/blob/develop/src/asm/ontop\_x86\_64\_ms\_pe\_gas.asm) - it's in C++ but it's a good reference for further study
+### What's special about Windows?
 
-### What's special with Windows
+Windows has more **callee-saved** registers (also called *non-volatile*
+registers) than the System V ABI used on Linux and macOS. We therefore need to
+save more data during a context switch. We also have to account for some
+Windows-specific stack metadata and the differences in the calling convention
+when setting up a new stack and calling our naked assembly function.
 
-The reason I don't consider this important enough to implement in the main example is that that Windows has more `callee saved` registers, or `non-volatile` registers as they call it in addition to one rather poorly documented quirk that we need to account for, so what we really do is just to save more data when we do the context switch and that needs more conditional compilation. There is also the case where we need to handle the differences in calling convention when writing and calling our `#[naked]` functions.
+> Supporting Windows adds a fair amount of conditional compilation without
+> changing much of what we need to understand the basic idea behind fibers.
+> That doesn't make it less interesting, though. We'll see firsthand some of
+> the difficulties of supporting multiple platforms when doing everything
+> from scratch.
 
->Conditionally compiling this to support windows correctly bloats our code with almost 50 % without adding much to what we need for a basic understanding.
+### Additional callee-saved (non-volatile) registers
+
+The first change is that Windows requires us to preserve `XMM6`–`XMM15` in
+addition to the registers already present in the original example. The `rdi`
+and `rsi` registers are also non-volatile on Windows, whereas the System V ABI
+uses them for its first two integer/pointer arguments.
+
+The XMM registers are 128 bits wide, so we'll represent each one with a pair of
+`u64` values, `[u64; 2]`. That gives us the necessary 16 bytes of storage per
+register, but **does not, by itself, guarantee 16-byte alignment**. We'll
+address that shortly because our assembly uses `movaps`, which requires an
+aligned memory operand.
+
+### The Thread Information Block
+
+The next difference is a little less obvious. Windows keeps information about
+the current operating-system thread in its **Thread Information Block**
+(`NT_TIB`), including the *Stack Base* and *Stack Limit*.
+
+On x86-64 Windows, the `gs` segment provides access to this thread-local
+structure. More precisely, the stack values are in memory *relative to* the
+`gs` segment base; the `gs` register does not itself contain these values.
+
+> **What is the GS register?**
 >
->Now that doesn't mean this isn't interesting, on the contrary, but we'll also experience first hand some of the difficulties of supporting multiple platforms when doing everything from scratch.
+> The `fs` and `gs` segment registers have a history going back to segmented
+> memory addressing. Today, operating systems also use segment-based
+> addressing for thread-specific data. Windows x64 uses `gs` to access the
+> thread's information block. If you're curious about the history, the
+> [Multics article](https://en.wikipedia.org/wiki/Multics) is an interesting
+> place to start.
 
-### Additional callee saved (non-volatile) registers
+When we switch fibers, our assembly saves the old stack base and limit and
+restores the values associated with the new stack. We'll use the names
+`stack_start` and `stack_end`, corresponding to the high and low ends of our
+allocated stack, since they are easier to mentally parse when the stack grows
+downward.
 
-The first thing I mentioned is that windows wants to save more data during context switches, in particular the XMM6-XMM15 registers. It's actually [mentioned specifically in the reference](https://docs.microsoft.com/en-us/cpp/build/x64-software-conventions?view=vs-2019#register-usage) so this is just adding more fields to our `ThreadContext` struct. This is very easy now that we've done it once before.
+### Alignment of ThreadContext
 
-In addition to the `XMM` registers the `rdi`and `rsi` registers are nonvolatile on Windows which means they're callee saved (on linux these registers are use for the first and second function arguments), so we need to add these too.
-
-However, there is one caveat: the `XMM`registers are 128 bits, and not 64. Rust has a `u128`type but we'll use `[u64;2]`instead to avoid some alignment issues that we _might_ get otherwise. Don't worry, I'll explain this further down.
-
-Our ThreadContext now looks like this:
+Here is the complete Windows version of `ThreadContext`, including the
+additional registers and stack information:
 
 ```rust
-#[cfg(target_os="windows")]
+#[cfg(target_os = "windows")]
 #[derive(Debug, Default)]
-#[repr(C)]
+#[repr(C, align(16))]
 struct ThreadContext {
-    rsp: u64,
-    r15: u64,
-    r14: u64,
-    r13: u64,
-    r12: u64,
-    rbx: u64,
-    rbp: u64,
-    rdi: u64,
-    rsi: u64,
     xmm6: [u64; 2],
     xmm7: [u64; 2],
     xmm8: [u64; 2],
@@ -90,30 +124,6 @@ struct ThreadContext {
     xmm13: [u64; 2],
     xmm14: [u64; 2],
     xmm15: [u64; 2],
-}
-```
-
-## The Thread Information Block
-
-The second part is poorly documented. I've actually struggled to verify exactly how skipping this will cause a failure on modern Windows but there's [enough references to it](https://probablydance.com/2013/02/20/handmade-coroutines-for-windows/) around from [trustworthy sources](https://github.com/boostorg/context/blob/develop/src/asm/ontop\_x86\_64\_ms\_pe\_gas.asm#L116-L129) that I'm in no doubt we need to go through this.
-
-You see, Windows wants to store some information about the currently running thread in what it calls the `Thread Information Block`, referred to as `NT_TIB`. Specifically it wants access to information about the `Stack Base` and the `Stack Limit` in the `gs`register.
-
-> What is the GS register you might ask?
->
->The answer might be a bit perplexing. Apparently these segment registers, GS on x64, and FS on x86 was intended by Intel to [allow programs to access many different segments of memory](https://stackoverflow.com/questions/10810203/what-is-the-fs-gs-register-intended-for) that were meant to be part of a persistent virtual store. Modern operating systems doesn't use these registers this way as we can only access our own process memory (which appear as a "flat" memory to us as programmers). Back when it wasn't clear that this would be the prevailing model, these registers would allow for different implementations by different operating systems. See the [Wikipedia article on the Multics operating system](https://en.wikipedia.org/wiki/Multics) if you're curious.
-
-That means that these segment registers are freely used by operating systems for what they deem appropriate. Windows stores information about the currently running thread in the GS register, and Linux uses these registers for thread local storage.
-
-When we switch threads, we should provide the information it expects about our [Stack Base and our Stack Limit](https://en.wikipedia.org/wiki/Win32\_Thread\_Information\_Block).
-
-Our `ThreadContext` now looks like this:
-
-```rust
-#[cfg(target_os="windows")]
-#[derive(Debug, Default)]
-#[repr(C)]
-struct ThreadContext {
     rsp: u64,
     r15: u64,
     r14: u64,
@@ -123,37 +133,86 @@ struct ThreadContext {
     rbp: u64,
     rdi: u64,
     rsi: u64,
-    xmm6: [u64; 2],
-    xmm7: [u64; 2],
-    xmm8: [u64; 2],
-    xmm9: [u64; 2],
-    xmm10: [u64; 2],
-    xmm11: [u64; 2],
-    xmm12: [u64; 2],
-    xmm13: [u64; 2],
-    xmm14: [u64; 2],
-    xmm15: [u64; 2],
     stack_start: u64,
     stack_end: u64,
 }
 ```
 
->Notice we use the `#[cfg(target_os="windows")]` attribute here on all the Windows specific functions and structs, which mean we need to give our "original" definitions an attribute that makes sure it compiles them for all other targets than Windows: `[cfg(not(target_os="windows"))].`
+The `#[repr(C)]` part keeps the fields in their declared order and uses a
+predictable, C-compatible layout. The `align(16)` part ensures that each
+`ThreadContext` starts on a 16-byte boundary. Since the XMM fields occupy 16
+bytes each and are placed first, every one of them also starts on a 16-byte
+boundary. This is important because we're using the aligned `movaps`
+instruction when saving and restoring those registers.
 
-I named the fields `stack_start` and `stack_end` since I find that easier to mentally parse since we know the stack starts on the top and grows downwards to the bottom.
+There are similar instructions that allow unaligned memory accesses, such as
+`movups` and `movdqu`. We could use one of those instead, but we'll keep the
+aligned instructions here and make sure our data is correctly aligned. The
+choice of `movaps` doesn't depend on whether a particular XMM register
+currently contains floating-point or integer data; these instructions copy
+its bits either way.
 
-Now to implement this we need to make a change to our `spawn()` function to actually provide this information:
+If you want to explore the performance characteristics of these instructions,
+have a look at [Agner Fog's instruction tables](https://www.agner.org/optimize/instruction_tables.pdf).
 
-### The Windows stack
+> **A real bug we encountered:** Without `align(16)`, the context could be
+> allocated at an address divisible by 8 but not by 16. The first `movaps`
+> could then fault, causing an access violation. Adding the alignment
+> attribute fixed that problem in our Windows test.
 
-![https://docs.microsoft.com/en-us/cpp/build/stack-usage?view=vs-2019#stack-allocation](images/image.png)
+Notice that all Windows-specific definitions are marked with
+`#[cfg(target_os = "windows")]`, while the original versions are marked with
+`#[cfg(not(target_os = "windows"))]`.
 
-You see, since Rust sets up our stack frames, we only need to care about where to put our `rsp`and the return address and this looks pretty much the same as in the System V ABI.
+### The Windows stack: 32 bytes of shadow space
 
-Now to implement this we need to make a change to our `spawn()` function to actually provide this information and set up our stack.
+There is one more important difference from the System V example. On Windows
+x64, **the caller must reserve 32 bytes of shadow space** (also called *home
+space*) for a function it calls, even if that function takes no arguments.
+The callee may use this area, so we must not place another live return address
+inside it.
+
+In our original example, we arranged three function addresses close together
+on the new stack: `f`, `skip`, and `guard`. That arrangement isn't sufficient
+on Windows. We need to leave room for the shadow space that `f` and `guard`
+can use.
+
+Here is the layout we're going to create. `S` is our 16-byte-aligned stack
+top, called `s_ptr` in the code. The offsets are byte offsets *below* that
+address:
+
+![Windows x64 stack showing the function pointers and their shadow space](images/windows-shadow-space.svg)
+
+The important addresses are:
+
+| Address | Contents |
+| --- | --- |
+| `S - 112` | Address of `f`; initial `rsp` |
+| `S - 104` | Address of `skip`; return address for `f` |
+| `S - 96` through `S - 65` | 32 bytes of shadow space available to `f` |
+| `S - 64` | Address of `guard` |
+| `S - 56` through `S - 49` | Unused return-address slot for `guard` |
+| `S - 48` through `S - 17` | 32 bytes of shadow space available to `guard` |
+
+Notice that the first two pointers are still adjacent. After `switch` executes
+`ret`, execution begins in `f`, with `rsp` pointing at the address of `skip`.
+That's the layout a normal call would have produced for `f`, and its 32-byte
+shadow space starts immediately above the return address.
+
+When `f` returns, it enters our small `skip` function. At that point, `rsp`
+points to the beginning of `f`'s shadow space. We advance `rsp` by 32 bytes
+and then use `ret` to pick up the address of `guard`. This gives `guard` the
+stack alignment and shadow space expected by the Windows x64 calling
+convention.
+
+#### Updated Windows spawn function
+
+All we change in `spawn()` is the initial placement of the function pointers
+and the starting value of `rsp`. We still initialize the same stack metadata.
+The complete Windows function is:
 
 ```rust
- #[cfg(target_os = "windows")]
+#[cfg(target_os = "windows")]
 pub fn spawn(&mut self, f: fn()) {
     let available = self
         .threads
@@ -163,90 +222,68 @@ pub fn spawn(&mut self, f: fn()) {
 
     let size = available.stack.len();
 
-    // see: https://docs.microsoft.com/en-us/cpp/build/stack-usage?view=vs-2019#stack-allocation
     unsafe {
         let s_ptr = available.stack.as_mut_ptr().offset(size as isize);
         let s_ptr = (s_ptr as usize & !15) as *mut u8;
-        std::ptr::write(s_ptr.offset(16) as *mut u64, guard as u64);
-        std::ptr::write(s_ptr.offset(24) as *mut u64, skip as u64);
-        std::ptr::write(s_ptr.offset(32) as *mut u64, f as u64);
-        available.ctx.rsp = s_ptr.offset((size - 32) as isize) as u64;
+        std::ptr::write(s_ptr.offset(-64) as *mut u64, guard as *const () as u64);
+        std::ptr::write(s_ptr.offset(-104) as *mut u64, skip as *const () as u64);
+        std::ptr::write(s_ptr.offset(-112) as *mut u64, f as *const () as u64);
+        available.ctx.rsp = s_ptr.offset(-112) as u64;
         available.ctx.stack_start = s_ptr as u64;
         available.ctx.stack_end = available.stack.as_ptr() as u64;
     }
-
 
     available.state = State::Ready;
 }
 ```
 
-As you see we provide a pointer to the start of our stack and a pointer to the end of our stack.
+These offsets preserve the intended 16-byte alignment for `f` and `guard`.
+They also give each function its own shadow space without changing our
+scheduler or context-switch assembly.
 
-#### Possible alignment issues
+#### Updated Windows skip function
 
-Well, this is supposed to be hard, remember? Windows does not disappoint us making things too easy. You see, when we move data from a 128 bit register we need to use some special assembly instructions. There are several of them that _mostly_ do the same:
-
-* `movdqa` [move double quad word aligned](https://www.felixcloutier.com/x86/movdqa:vmovdqa32:vmovdqa64)
-* `movdqu`[move double quad word unaligned](https://www.felixcloutier.com/x86/movdqu:vmovdqu8:vmovdqu16:vmovdqu32:vmovdqu64)
-* `movaps`[move aligned packed single-precision floating point value](https://www.felixcloutier.com/x86/movaps)
-* `movups`[move unaligned packed single-precision floating point value](https://www.felixcloutier.com/x86/movups)
-
-As you see most method has an `aligned`and and `unaligned`variant. The difference here is that `*ps`type instructions are targeting floating point values and the `*dq/*dq` type instructions are targeting integer values. Now both will work, but if you clicked on the Microsoft reference you probably noticed that the `XMM` are used for floating point values so the `*ps`type instructions are the right ones for us to use.
-
-The `aligned`versions have historically been slightly faster under most circumstances and would be preferred in a context switch, but the latest information I've read about this is **that they've been practically the same for the last 6 generations of CPUs regarding performance**.
-
-> If you want to read more about the cost for different instructions on newer and older processors, have a look at [Agner Fog's instruction tables](https://www.agner.org/optimize/instruction\_tables.pdf).
-
-However, since the aligned instructions are used in all the reference implementations I've encountered, we'll use them as well although they expose us for some extra complexity, we are still learning stuff aren't we?
-
-By aligned, we mean that the memory they read/write from/to is 16 byte aligned.
-
-Now, the way I solve this is to push the fields that requires alignment to the start of our struct, and add a new attribute `#[repr(align(16))]`.
-
->The `repr(align(n))`attribute ensures that our struct starts at a 16 byte aligned memory address, so when we write to `XMM6`in the start of our assembly it's already 16 byte aligned, and since 128 is divisible with 16 so are the rest of the fields.
->
->But, and this can be important, since we now have two different field sizes our compiler might choose to "pad" our fields, now that doesn't happen right now but pushing our larger fields to the start will minimize the risk of that happening at a later time.
->
->We also avoid manually adding a padding member to our struct since we have 7`u64`fields before our`XMM`fields preventing them from aligning to 16 (remember, the`repr(C)`attribute guarantees that the compiler will not reorder our fields).
-
-Our `Threadcontext`ends up like this after our changes:
+The original non-Windows `skip()` only needs one instruction:
 
 ```rust
-#[cfg(target_os = "windows")]
-#[derive(Debug, Default)]
-#[repr(C)]
-#[repr(align(16))]
-struct ThreadContext {
-    xmm6: [u64; 2],
-    xmm7: [u64; 2],
-    xmm8: [u64; 2],
-    xmm9: [u64; 2],
-    xmm10: [u64; 2],
-    xmm11: [u64; 2],
-    xmm12: [u64; 2],
-    xmm13: [u64; 2],
-    xmm14: [u64; 2],
-    xmm15: [u64; 2],
-    rsp: u64,
-    r15: u64,
-    r14: u64,
-    r13: u64,
-    r12: u64,
-    rbx: u64,
-    rbp: u64,
-    rdi: u64,
-    rsi: u64,
-    stack_start: u64,
-    stack_end: u64,
+#[cfg(not(target_os = "windows"))]
+#[unsafe(naked)]
+unsafe extern "C" fn skip() {
+    naked_asm!("ret")
 }
 ```
 
-Last we need to change our `switch()`function and update our assembly. After all this explanation this is pretty easy:
+For Windows, we need one extra instruction:
 
 ```rust
 #[cfg(target_os = "windows")]
-#[naked]
-#[no_mangle]
+#[unsafe(naked)]
+unsafe extern "C" fn skip() {
+    naked_asm!(
+        "add rsp, 32",
+        "ret"
+    )
+}
+```
+
+The `add rsp, 32` skips the 32-byte shadow space that was reserved for `f`.
+The following `ret` picks up `guard` from the stack. Our `skip` function is
+naked precisely because it is a tiny piece of hand-written stack control,
+not an ordinary compiler-generated function body.
+
+### Updating the context switch
+
+Lastly, we need to update `switch()` so it saves and restores the additional
+registers and the Windows stack metadata. The arguments also follow the
+Windows convention: `rcx` holds the old context pointer and `rdx` holds the
+new one, rather than the `rdi` and `rsi` used by System V.
+
+The Windows version is:
+
+```rust
+#[cfg(target_os = "windows")]
+#[unsafe(naked)]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn switch() {
     naked_asm!(
         "movaps      [rcx + 0x00], xmm6",
@@ -300,10 +337,53 @@ unsafe extern "C" fn switch() {
 }
 ```
 
-As you see, our code gets just a little bit longer. It's not difficult once you've figured out what to store where, but it does add a lot of code.
+We use `rax` as a temporary when reading and writing the `gs`-relative
+memory because an ordinary `mov` cannot copy directly from one memory
+location to another. Any suitably available general-purpose register would
+do; we use `rax` because it is caller-saved on both ABIs.
 
->Our inline assembly won't let us `mov` from one memory offset to another memory offset so we need to go via a register. I chose the`rax` register (the default register for the return value) but could have chosen any general purpose register for this.
+Our `t_yield()` also selects different argument registers when calling
+`switch`:
+
+```rust
+if cfg!(not(target_os = "windows")) {
+    asm!("call switch", in("rdi") old, in("rsi") new, clobber_abi("C"));
+} else {
+    asm!("call switch", in("rcx") old, in("rdx") new, clobber_abi("system"));
+}
+```
+
+The `clobber_abi` annotation tells the compiler which caller-saved registers
+might be modified by the assembly call. The callee-saved registers are the
+ones our `switch()` saves and restores explicitly.
+
+### An alternative: using a trampoline
+
+There is another way to handle Windows shadow space without manually spacing
+three return addresses. We could start each new fiber in a small **trampoline**
+function instead of going directly to `f`.
+
+The initial stack would then contain a return address for the trampoline, and
+we would make the task function available to it (for example, through a
+saved register). The trampoline would align `rsp`, reserve 32 bytes of shadow
+space, call `f`, and call `guard` after `f` returns. It could also trap if
+`guard` unexpectedly returned.
+
+This approach can make the control flow easier to follow, especially if the
+initial stack layout becomes more complicated. I chose to keep `skip()` here
+because the changes are smaller and the resulting example stays much closer
+to the original Linux/macOS version.
 
 ## Conclusion
 
-So this is all we needed to do. As you see we don't really do anything new here, the difficult part is figuring out how Windows works and what it expects, but now that we have done our job properly we should have a pretty complete context switch for both Unix and Windows platforms.
+So this is all we needed to change to support the main Windows x64 calling
+convention requirements in this example. The underlying fiber mechanism is the
+same: save the current execution context and restore another one. The
+additional work is in preserving Windows' extra non-volatile registers,
+keeping the context suitably aligned, restoring the relevant stack metadata,
+and providing shadow space for the functions we run on our manually allocated
+stacks.
+
+This is still an educational example rather than a complete replacement for
+the Windows fiber APIs, but it demonstrates how the same basic context-switch
+idea can be adapted to a different ABI.

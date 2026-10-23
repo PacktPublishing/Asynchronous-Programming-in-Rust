@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 dummy-waker = "1.1.0"
-mio = { version = "0.8.9", features = ["net", "os-poll"] }
+mio = { version = "1", features = ["net", "os-poll"] }
