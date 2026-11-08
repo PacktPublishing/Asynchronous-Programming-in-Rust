@@ -12,21 +12,15 @@ fn main() {
     executor.block_on(async_main());
 }
 
-
-
-
-
-
-
 // =================================
 // We rewrite this:
 // =================================
-    
-// coro fn request(i: usize) {
+
+// coroutine fn request(i: usize) {
 //     let path = format!("/{}/HelloWorld{i}", i * 1000);
 //     let txt = Http::get(&path).wait;
 //     println!("{txt}");
-// 
+//
 
 // }
 
@@ -34,10 +28,10 @@ fn main() {
 // Into this:
 // =================================
 
-fn request(i: usize) -> impl Future<Output=String> {
+fn request(i: usize) -> impl Future<Output = String> {
     Coroutine0::new(i)
 }
-        
+
 enum State0 {
     Start(usize),
     Wait1(Box<dyn Future<Output = String>>),
@@ -50,32 +44,32 @@ struct Coroutine0 {
 
 impl Coroutine0 {
     fn new(i: usize) -> Self {
-        Self { state: State0::Start(i) }
+        Self {
+            state: State0::Start(i),
+        }
     }
 }
-
 
 impl Future for Coroutine0 {
     type Output = String;
 
-    fn poll(&mut self) -> PollState<Self::Output> {
+    fn poll(&mut self, waker: &Waker) -> PollState<Self::Output> {
         loop {
-        match self.state {
+            match self.state {
                 State0::Start(i) => {
                     // ---- Code you actually wrote ----
                     let path = format!("/{}/HelloWorld{i}", i * 1000);
 
                     // ---------------------------------
-                    let fut1 = Box::new( Http::get(&path));
+                    let fut1 = Box::new(Http::get(&path));
                     self.state = State0::Wait1(fut1);
                 }
 
                 State0::Wait1(ref mut f1) => {
-                    match f1.poll() {
+                    match f1.poll(waker) {
                         PollState::Ready(txt) => {
                             // ---- Code you actually wrote ----
                             println!("{txt}");
-
 
                             // ---------------------------------
                             self.state = State0::Resolved;
@@ -85,20 +79,19 @@ impl Future for Coroutine0 {
                     }
                 }
 
-                State0::Resolved => panic!("Polled a resolved future")
+                State0::Resolved => panic!("Polled a resolved future"),
             }
         }
     }
 }
 
-
 // =================================
 // We rewrite this:
 // =================================
-    
-// coro fn async_main() {
+
+// coroutine fn async_main() {
 //     println!("Program starting");
-// 
+//
 //     for i in 0..5 {
 //         let future = request(i);
 //         runtime::spawn(future);
@@ -110,10 +103,10 @@ impl Future for Coroutine0 {
 // Into this:
 // =================================
 
-fn async_main() -> impl Future<Output=String> {
+fn async_main() -> impl Future<Output = String> {
     Coroutine1::new()
 }
-        
+
 enum State1 {
     Start,
     Resolved,
@@ -125,32 +118,33 @@ struct Coroutine1 {
 
 impl Coroutine1 {
     fn new() -> Self {
-        Self { state: State1::Start }
+        Self {
+            state: State1::Start,
+        }
     }
 }
-
 
 impl Future for Coroutine1 {
     type Output = String;
 
-    fn poll(&mut self) -> PollState<Self::Output> {
+    fn poll(&mut self, waker: &Waker) -> PollState<Self::Output> {
         loop {
-        match self.state {
+            match self.state {
                 State1::Start => {
                     // ---- Code you actually wrote ----
                     println!("Program starting");
 
-    for i in 0..5 {
-        let future = request(i);
-        runtime::spawn(future);
-    }
+                    for i in 0..5 {
+                        let future = request(i);
+                        runtime::spawn(future);
+                    }
 
                     // ---------------------------------
                     self.state = State1::Resolved;
                     break PollState::Ready(String::new());
                 }
 
-                State1::Resolved => panic!("Polled a resolved future")
+                State1::Resolved => panic!("Polled a resolved future"),
             }
         }
     }
