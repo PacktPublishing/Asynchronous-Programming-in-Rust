@@ -110,7 +110,7 @@ impl Future for Coroutine0 {
                             // ---- Code you actually wrote ----
                             writeln!(writer, "{txt}").unwrap();
 
-                            println!("{}", buffer);
+                            println!("{buffer}");
                             // ---------------------------------
                             self.state = State0::Resolved;
 
