@@ -1,4 +1,4 @@
-pub use executor::{spawn, Executor};
+pub use executor::Executor;
 pub use reactor::reactor;
 
 mod executor;

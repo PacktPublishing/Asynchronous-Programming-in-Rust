@@ -1,4 +1,4 @@
-// NEW
+#![allow(unused)]
 use std::{future::Future, pin::Pin, task::{Poll, Context}};
 
 

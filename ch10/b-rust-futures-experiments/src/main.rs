@@ -1,3 +1,4 @@
+#![allow(unused)]
 mod http;
 mod runtime;
 use crate::http::Http;
