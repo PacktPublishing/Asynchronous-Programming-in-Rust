@@ -107,20 +107,25 @@ impl Future for Coroutine0 {
                 State0::Wait2(ref mut f2) => {
                     match f2.as_mut().poll(waker) {
                         PollState::Ready(txt) => {
-                            // Restore stack
-                            let buffer = this.stack.buffer.as_ref().take().unwrap();
+                            // Restore stack part 1
                             let writer = unsafe { &mut *this.stack.writer.take().unwrap() };
-
+                                        
                             // ---- Code you actually wrote ----
                             writeln!(writer, "{txt}").unwrap();
-
-                            println!("{}", buffer);
                             // ---------------------------------
+                                        
+                            // Restore stack part 2
+                            let buffer = this.stack.buffer.as_ref().unwrap();
+                                        
+                            // ---- Code you actually wrote ----
+                            println!("{buffer}");
+                            // ---------------------------------
+                                        
                             this.state = State0::Resolved;
-
+                                        
                             // Save stack / free resources
-                            let _ = this.stack.buffer.take();
-
+                            drop(this.stack.buffer.take());
+                                        
                             break PollState::Ready(String::new());
                         }
                         PollState::NotReady => break PollState::NotReady,

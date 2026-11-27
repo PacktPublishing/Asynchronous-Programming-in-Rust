@@ -104,19 +104,25 @@ impl Future for Coroutine0 {
                 State0::Wait2(ref mut f2) => {
                     match f2.poll(waker) {
                         PollState::Ready(txt) => {
-                            // Restore stack
-                            let buffer = self.stack.buffer.as_ref().take().unwrap();
+                            // Restore stack part 1
+                            // (due to aliasing rules in Rust we need to do it in two steps)
                             let writer = unsafe { &mut *self.stack.writer.take().unwrap() };
 
                             // ---- Code you actually wrote ----
                             writeln!(writer, "{txt}").unwrap();
-
-                            println!("{}", buffer);
                             // ---------------------------------
+                            
+                            // Restore stack part 2
+                            let buffer = self.stack.buffer.as_ref().unwrap();
+                            
+                            // ---- Code you actually wrote ----
+                            println!("{buffer}");
+                            // ---------------------------------
+                            
                             self.state = State0::Resolved;
 
                             // Save stack / free resources
-                            let _ = self.stack.buffer.take();
+                            drop(self.stack.buffer.take());
 
                             break PollState::Ready(String::new());
                         }
