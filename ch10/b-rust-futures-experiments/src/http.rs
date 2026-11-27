@@ -64,9 +64,9 @@ impl Future for HttpGetFuture {
             println!("FIRST POLL - START OPERATION");
             self.write_request();
             // CHANGED
+            runtime::reactor().set_waker(cx, self.id);
             let stream = (&mut self).stream.as_mut().unwrap();
             runtime::reactor().register(stream, Interest::READABLE, id);
-            runtime::reactor().set_waker(cx, self.id);
             // ============
         }
 

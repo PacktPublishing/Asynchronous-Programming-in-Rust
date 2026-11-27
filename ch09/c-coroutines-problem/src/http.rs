@@ -59,8 +59,8 @@ impl Future for HttpGetFuture {
             self.write_request();
 
             let stream = self.stream.as_mut().unwrap();
-            runtime::reactor().register(stream, Interest::READABLE, self.id);
             runtime::reactor().set_waker(waker, self.id);
+            runtime::reactor().register(stream, Interest::READABLE, self.id);
         }
 
         let mut buff = vec![0u8; 147];
